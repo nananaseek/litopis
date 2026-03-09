@@ -1,0 +1,290 @@
+import logging
+import re
+from datetime import UTC, datetime
+
+import httpx
+from beanie import PydanticObjectId
+from beanie.operators import In
+from fastapi import APIRouter, Depends, HTTPException, Query, status
+
+from app.api.deps import get_current_user, get_current_user_optional
+from app.core.events import broadcast
+from app.models.rating import ToolRating
+from app.models.tool import Tool
+from app.models.user import User
+from app.schemas.tool import ToolCreate, ToolDetailResponse, ToolResponse, ToolRatingSet, ToolUpdate
+
+logger = logging.getLogger(__name__)
+router = APIRouter(prefix="/tools", tags=["tools"])
+
+_GITHUB_REPO_RE = re.compile(r"github\.com/([^/]+/[^/#?]+)")
+
+
+def _tool_to_response(tool: Tool, user_rating: int | None = None) -> ToolResponse:
+    return ToolResponse(
+        id=str(tool.id),
+        name=tool.name,
+        description=tool.description,
+        category=tool.category,
+        icon=tool.icon,
+        tags=tool.tags,
+        license=tool.license,
+        github_url=str(tool.github_url) if tool.github_url else None,
+        official_url=str(tool.official_url) if tool.official_url else None,
+        download_url=str(tool.download_url) if tool.download_url else None,
+        is_published=tool.is_published,
+        owner_id=str(tool.owner_id),
+        created_at=tool.created_at,
+        updated_at=tool.updated_at,
+        average_rating=getattr(tool, "average_rating", None),
+        rating_count=getattr(tool, "rating_count", 0) or 0,
+        user_rating=user_rating,
+    )
+
+
+async def _fetch_github_readme(github_url: str) -> str | None:
+    match = _GITHUB_REPO_RE.search(str(github_url))
+    if not match:
+        logger.warning("GitHub URL regex did not match: %s", github_url)
+        return None
+    repo = match.group(1).rstrip("/")
+    api_url = f"https://api.github.com/repos/{repo}/readme"
+    headers = {"Accept": "application/vnd.github.html+json"}
+    try:
+        async with httpx.AsyncClient(timeout=15, follow_redirects=True) as client:
+            resp = await client.get(api_url, headers=headers)
+            if resp.status_code == 200:
+                logger.info("Fetched README via GitHub API for %s", repo)
+                return resp.text
+            logger.warning("GitHub API returned %s for %s", resp.status_code, repo)
+    except Exception as exc:
+        logger.error("Failed to fetch README for %s: %s", repo, exc)
+    return None
+
+
+async def _recalculate_tool_rating(tool_id: PydanticObjectId) -> None:
+    """Оновлює average_rating та rating_count для інструменту."""
+    tool = await Tool.get(tool_id)
+    if tool is None:
+        return
+    ratings = await ToolRating.find(ToolRating.tool_id == tool_id).to_list()
+    if not ratings:
+        await tool.set({Tool.average_rating: None, Tool.rating_count: 0, Tool.updated_at: datetime.now(UTC)})
+        return
+    total = sum(r.value for r in ratings)
+    count = len(ratings)
+    avg = round(total / count, 1)
+    await tool.set({Tool.average_rating: avg, Tool.rating_count: count, Tool.updated_at: datetime.now(UTC)})
+
+
+async def _get_own_tool(tool_id: str, user: User) -> Tool:
+    try:
+        oid = PydanticObjectId(tool_id)
+    except Exception:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Невалідний ID")
+    tool = await Tool.get(oid)
+    if tool is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Інструмент не знайдено")
+    if tool.owner_id != user.id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Доступ заборонено")
+    return tool
+
+
+@router.get("/my", response_model=list[ToolResponse])
+async def get_my_tools(
+    user: User = Depends(get_current_user),
+    skip: int = Query(0, ge=0),
+    limit: int = Query(50, ge=1, le=100),
+):
+    tools = (
+        await Tool.find(Tool.owner_id == user.id)
+        .sort(-Tool.created_at)
+        .skip(skip)
+        .limit(limit)
+        .to_list()
+    )
+    return [_tool_to_response(t) for t in tools]
+
+
+@router.post("/", response_model=ToolResponse, status_code=status.HTTP_201_CREATED)
+async def create_tool(data: ToolCreate, user: User = Depends(get_current_user)):
+    now = datetime.now(UTC)
+    readme = None
+    if data.github_url:
+        readme = await _fetch_github_readme(str(data.github_url))
+    tool = Tool(
+        **data.model_dump(),
+        readme_content=readme,
+        owner_id=user.id,
+        is_published=False,
+        created_at=now,
+        updated_at=now,
+    )
+    await tool.insert()
+    return _tool_to_response(tool)
+
+
+@router.get("/library", response_model=list[ToolResponse])
+async def get_library(
+    skip: int = Query(0, ge=0),
+    limit: int = Query(50, ge=1, le=100),
+    category: str | None = Query(None),
+    search: str | None = Query(None),
+    tag: str | None = Query(None),
+    min_rating: int | None = Query(None, ge=1, le=5, description="Мінімальний середній рейтинг (1-5)"),
+    user: User | None = Depends(get_current_user_optional),
+):
+    query = Tool.find(Tool.is_published == True)  # noqa: E712
+    if category:
+        query = query.find(Tool.category == category)
+    if tag:
+        query = query.find({"tags": tag})
+    if search:
+        query = query.find(
+            {"$or": [
+                {"name": {"$regex": search, "$options": "i"}},
+                {"description": {"$regex": search, "$options": "i"}},
+                {"tags": {"$regex": search, "$options": "i"}},
+            ]}
+        )
+    if min_rating is not None:
+        query = query.find(Tool.average_rating >= float(min_rating))
+    tools = await query.sort(-Tool.created_at).skip(skip).limit(limit).to_list()
+    user_ratings_map: dict[str, int] = {}
+    if user and tools:
+        tool_ids = [t.id for t in tools]
+        ratings = await ToolRating.find(
+            In(ToolRating.tool_id, tool_ids),
+            ToolRating.user_id == user.id,
+        ).to_list()
+        for r in ratings:
+            user_ratings_map[str(r.tool_id)] = r.value
+    return [_tool_to_response(t, user_ratings_map.get(str(t.id))) for t in tools]
+
+
+@router.get("/detail/{tool_id}", response_model=ToolDetailResponse)
+async def get_tool_detail(
+    tool_id: str,
+    user: User | None = Depends(get_current_user_optional),
+):
+    """Public detail page — accessible for published tools or by owner."""
+    try:
+        oid = PydanticObjectId(tool_id)
+    except Exception:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Невалідний ID")
+    tool = await Tool.get(oid)
+    if tool is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Інструмент не знайдено")
+
+    user_rating = None
+    if user:
+        rating_doc = await ToolRating.find_one(
+            ToolRating.tool_id == oid,
+            ToolRating.user_id == user.id,
+        )
+        if rating_doc:
+            user_rating = rating_doc.value
+    resp = _tool_to_response(tool, user_rating)
+    return ToolDetailResponse(
+        **resp.model_dump(),
+        readme_content=tool.readme_content,
+        about_content=tool.about_content,
+    )
+
+
+@router.get("/{tool_id}", response_model=ToolResponse)
+async def get_tool(tool_id: str, user: User = Depends(get_current_user)):
+    tool = await _get_own_tool(tool_id, user)
+    return _tool_to_response(tool)
+
+
+@router.put("/{tool_id}", response_model=ToolResponse)
+async def update_tool(
+    tool_id: str,
+    data: ToolUpdate,
+    user: User = Depends(get_current_user),
+):
+    tool = await _get_own_tool(tool_id, user)
+    update_data = data.model_dump(exclude_unset=True)
+    if update_data:
+        new_gh = update_data.get("github_url")
+        old_gh = str(tool.github_url) if tool.github_url else None
+        if new_gh is not None and str(new_gh) != old_gh:
+            update_data["readme_content"] = await _fetch_github_readme(str(new_gh)) if new_gh else None
+        update_data["updated_at"] = datetime.now(UTC)
+        await tool.set(update_data)
+    await broadcast({"type": "tool_updated", "tool_id": tool_id, "owner_id": str(user.id)})
+    return _tool_to_response(tool)
+
+
+@router.patch("/{tool_id}/refresh-readme", response_model=ToolDetailResponse)
+async def refresh_readme(tool_id: str, user: User = Depends(get_current_user)):
+    tool = await _get_own_tool(tool_id, user)
+    readme = None
+    if tool.github_url:
+        readme = await _fetch_github_readme(str(tool.github_url))
+    await tool.set({Tool.readme_content: readme, Tool.updated_at: datetime.now(UTC)})
+    resp = _tool_to_response(tool)
+    return ToolDetailResponse(
+        **resp.model_dump(),
+        readme_content=readme,
+        about_content=tool.about_content,
+    )
+
+
+@router.patch("/{tool_id}/publish", response_model=ToolResponse)
+async def publish_tool(tool_id: str, user: User = Depends(get_current_user)):
+    tool = await _get_own_tool(tool_id, user)
+    await tool.set({Tool.is_published: True, Tool.updated_at: datetime.now(UTC)})
+    await broadcast({"type": "tool_published", "tool_id": tool_id})
+    return _tool_to_response(tool)
+
+
+@router.patch("/{tool_id}/unpublish", response_model=ToolResponse)
+async def unpublish_tool(tool_id: str, user: User = Depends(get_current_user)):
+    tool = await _get_own_tool(tool_id, user)
+    await tool.set({Tool.is_published: False, Tool.updated_at: datetime.now(UTC)})
+    await broadcast({"type": "tool_unpublished", "tool_id": tool_id})
+    return _tool_to_response(tool)
+
+
+@router.delete("/{tool_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_tool(tool_id: str, user: User = Depends(get_current_user)):
+    tool = await _get_own_tool(tool_id, user)
+    await tool.delete()
+    await broadcast({"type": "tool_deleted", "tool_id": tool_id, "owner_id": str(user.id)})
+
+
+@router.put("/{tool_id}/rating", response_model=ToolResponse)
+async def set_tool_rating(
+    tool_id: str,
+    data: ToolRatingSet,
+    user: User = Depends(get_current_user),
+):
+    """Встановити або оновити рейтинг інструменту (1–5). Дозволено лише для опублікованих інструментів."""
+    try:
+        oid = PydanticObjectId(tool_id)
+    except Exception:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Невалідний ID")
+    tool = await Tool.get(oid)
+    if tool is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Інструмент не знайдено")
+    if not tool.is_published:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Рейтинг можна ставити лише для опублікованих інструментів",
+        )
+    existing = await ToolRating.find_one(
+        ToolRating.tool_id == oid,
+        ToolRating.user_id == user.id,
+    )
+    if existing:
+        existing.value = data.value
+        await existing.save()
+    else:
+        rating = ToolRating(tool_id=oid, user_id=user.id, value=data.value)
+        await rating.insert()
+    await _recalculate_tool_rating(oid)
+    tool = await Tool.get(oid)
+    assert tool is not None
+    return _tool_to_response(tool, data.value)

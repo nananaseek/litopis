@@ -1,0 +1,36 @@
+[project]
+name = "litopis-backend"
+version = "0.1.0"
+description = "Litopis backend — FastAPI + Beanie (MongoDB)"
+requires-python = ">=3.14"
+dependencies = [
+    "fastapi[standard]",
+    "beanie",
+    "motor",
+    "pydantic[email]",
+    "pydantic-settings",
+    "python-jose[cryptography]",
+    "bcrypt",
+    "python-multipart",
+    "slowapi",
+    "uvicorn",
+    "httpx",
+]
+
+[dependency-groups]
+dev = [
+    "pytest",
+    "pytest-asyncio",
+    "httpx",
+    "ruff",
+]
+
+[tool.ruff]
+line-length = 99
+target-version = "py314"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "N", "W", "UP"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
