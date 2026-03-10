@@ -1,4 +1,35 @@
 services:
+  nginx-proxy:
+    image: nginxproxy/nginx-proxy:alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - /var/run/docker.sock:/tmp/docker.sock:ro
+      - certs:/etc/nginx/certs:ro
+      - vhost:/etc/nginx/vhost.d
+      - html:/usr/share/nginx/html
+    environment:
+      - ENABLE_IPV6=true
+      - SSL_POLICY=Mozilla-Modern
+    labels:
+      - "com.github.jrcs.letsencrypt_nginx_proxy_companion.nginx_proxy=true"
+
+  acme-companion:
+    image: nginxproxy/acme-companion
+    restart: unless-stopped
+    depends_on:
+      - nginx-proxy
+    environment:
+      - DEFAULT_EMAIL=${CERTBOT_EMAIL:-admin@example.com}
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - certs:/etc/nginx/certs
+      - vhost:/etc/nginx/vhost.d
+      - html:/usr/share/nginx/html
+      - acme:/etc/acme.sh
+
   mongodb:
     image: mongo:7
     restart: unless-stopped
@@ -18,10 +49,6 @@ services:
       - "8000"
     env_file:
       - .env
-    environment:
-      # Якщо в .env задано MONGODB_URL — використовується зовнішня БД; інакше — MongoDB з Docker
-      - MONGODB_URL=${MONGODB_URL:-mongodb://mongodb:27017}
-      - MONGODB_DB_NAME=${MONGODB_DB_NAME:-litopis}
     depends_on:
       mongodb:
         condition: service_healthy
@@ -30,28 +57,17 @@ services:
     build:
       context: ./frontend
     restart: unless-stopped
-    ports:
-      - "80:80"
-      - "443:443"
+    expose:
+      - "80"
     environment:
-      - DOMAIN=${DOMAIN:-localhost}
-    volumes:
-      - certbot_conf:/etc/letsencrypt
-      - certbot_www:/var/www/certbot
+      - VIRTUAL_HOST=${DOMAIN:-localhost}
+      - LETSENCRYPT_HOST=${DOMAIN}
     depends_on:
       - backend
 
-  certbot:
-    image: certbot/certbot
-    restart: unless-stopped
-    volumes:
-      - certbot_conf:/etc/letsencrypt
-      - certbot_www:/var/www/certbot
-    entrypoint: "/bin/sh -c 'trap exit TERM; while :; do certbot renew --webroot -w /var/www/certbot --quiet; sleep 12h & wait $${!}; done'"
-    depends_on:
-      - frontend
-
 volumes:
   mongo_data:
-  certbot_conf:
-  certbot_www:
+  certs:
+  vhost:
+  html:
+  acme:
