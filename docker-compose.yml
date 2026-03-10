@@ -1,14 +1,14 @@
 services:
-  # mongodb:
-  #   image: mongo:7
-  #   restart: unless-stopped
-  #   volumes:
-  #     - mongo_data:/data/db
-  #   healthcheck:
-  #     test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
-  #     interval: 10s
-  #     timeout: 5s
-  #     retries: 5
+  mongodb:
+    image: mongo:7
+    restart: unless-stopped
+    volumes:
+      - mongo_data:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   backend:
     build:
@@ -18,13 +18,13 @@ services:
       - "8000"
     env_file:
       - .env
-    # environment:
-    #   # Якщо в .env задано MONGODB_URL — використовується зовнішня БД; інакше — MongoDB з Docker
-    #   - MONGODB_URL=${MONGODB_URL:-mongodb://mongodb:27017}
-    #   - MONGODB_DB_NAME=${MONGODB_DB_NAME:-litopis}
-    # depends_on:
-    #   mongodb:
-    #     condition: service_healthy
+    environment:
+      # Якщо в .env задано MONGODB_URL — використовується зовнішня БД; інакше — MongoDB з Docker
+      - MONGODB_URL=${MONGODB_URL:-mongodb://mongodb:27017}
+      - MONGODB_DB_NAME=${MONGODB_DB_NAME:-litopis}
+    depends_on:
+      mongodb:
+        condition: service_healthy
 
   frontend:
     build:
