@@ -2,11 +2,12 @@ from beanie import init_beanie
 from motor.motor_asyncio import AsyncIOMotorClient
 
 from app.config import settings
+from app.models.favorite import ToolFavorite
 from app.models.rating import ToolRating
 from app.models.tool import Tool
 from app.models.user import User
 
-DOCUMENT_MODELS = [User, Tool, ToolRating]
+DOCUMENT_MODELS = [User, Tool, ToolRating, ToolFavorite]
 
 
 async def init_db() -> AsyncIOMotorClient:

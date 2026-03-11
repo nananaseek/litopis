@@ -7,7 +7,7 @@ import * as toolsApi from '../api/tools'
 import type { ToolResponse } from '../api/tools'
 import { useToolsWS } from '../hooks/useToolsWS'
 
-type TabId = 'my' | 'library'
+type TabId = 'my' | 'library' | 'favorites'
 
 export default function ArsenalPage() {
   const [activeTab, setActiveTab] = useState<TabId>('my')
@@ -18,6 +18,8 @@ export default function ArsenalPage() {
   const [modalOpen, setModalOpen] = useState(false)
   const [myTools, setMyTools] = useState<ToolResponse[]>([])
   const [libraryTools, setLibraryTools] = useState<ToolResponse[]>([])
+  const [favoriteTools, setFavoriteTools] = useState<ToolResponse[]>([])
+  const [libraryStats, setLibraryStats] = useState<{ total: number; new: number } | null>(null)
   const [currentPage, setCurrentPage] = useState(1)
   const [loading, setLoading] = useState(false)
   const pageSize = 9
@@ -35,23 +37,31 @@ export default function ArsenalPage() {
       if (search) params.search = search
       if (minRating != null) params.min_rating = minRating
       setLibraryTools(await toolsApi.getLibrary(params))
+      const stats = await toolsApi.getLibraryStats()
+      setLibraryStats(stats)
     } catch { /* interceptor */ } finally { setLoading(false) }
   }, [categoryFilter, search, minRating])
+
+  const loadFavorites = useCallback(async () => {
+    setLoading(true)
+    try { setFavoriteTools(await toolsApi.getFavorites()) } catch { /* interceptor */ } finally { setLoading(false) }
+  }, [])
 
   useToolsWS(useCallback(() => { loadLibrary() }, [loadLibrary]), activeTab === 'library')
 
   useEffect(() => {
     if (activeTab === 'my') loadMyTools()
-    else loadLibrary()
-  }, [activeTab, loadMyTools, loadLibrary])
+    else if (activeTab === 'library') loadLibrary()
+    else loadFavorites()
+  }, [activeTab, loadMyTools, loadLibrary, loadFavorites])
 
-  const tools = activeTab === 'my' ? myTools : libraryTools
+  const tools = activeTab === 'my' ? myTools : activeTab === 'library' ? libraryTools : favoriteTools
 
   const filteredTools = useMemo(() => {
     let list = tools.filter((t) => {
       const matchSearch = !search || t.name.toLowerCase().includes(search.toLowerCase()) || t.description.toLowerCase().includes(search.toLowerCase())
       const matchCategory = categoryFilter === 'Всі' || t.category === categoryFilter
-      return activeTab === 'library' ? true : matchSearch && matchCategory
+      return activeTab === 'library' || activeTab === 'favorites' ? matchSearch && matchCategory : matchSearch && matchCategory
     })
     if (sortBy === 'name') list = [...list].sort((a, b) => a.name.localeCompare(b.name))
     return list
@@ -64,6 +74,11 @@ export default function ArsenalPage() {
   const handlePublish = async (id: string) => { await toolsApi.publishTool(id); await loadMyTools() }
   const handleUnpublish = async (id: string) => { await toolsApi.unpublishTool(id); await loadMyTools() }
   const handleDelete = async (id: string) => { await toolsApi.deleteTool(id); await loadMyTools() }
+  const handleFavoriteChange = useCallback(() => {
+    if (activeTab === 'my') loadMyTools()
+    else if (activeTab === 'library') loadLibrary()
+    else loadFavorites()
+  }, [activeTab, loadMyTools, loadLibrary, loadFavorites])
 
   const tabBase = 'inline-flex items-center gap-1.5 px-4 py-2 text-sm font-medium rounded-lg border transition-colors cursor-pointer'
   const tabActive = 'bg-blue-600 border-blue-600 text-white hover:bg-blue-700'
@@ -77,13 +92,6 @@ export default function ArsenalPage() {
 
   return (
     <div className="max-w-6xl mx-auto">
-      {/* Breadcrumb */}
-      <nav className="flex items-center gap-1.5 text-sm text-slate-500 dark:text-gray-500 mb-4">
-        <a href="/" className="text-slate-500 dark:text-gray-500 no-underline hover:text-blue-500 dark:hover:text-blue-400 transition">Головна</a>
-        <svg width="10" height="10" viewBox="0 0 16 16" fill="none" className="opacity-60"><path d="M6 4l4 4-4 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
-        <span className="text-slate-700 dark:text-gray-300 font-medium">Арсенал</span>
-      </nav>
-
       {/* Header */}
       <header className="flex items-start justify-between gap-4 mb-6">
         <div className="flex-1 min-w-0">
@@ -113,15 +121,17 @@ export default function ArsenalPage() {
           <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M3 2h10a1 1 0 011 1v10a1 1 0 01-1 1H3a1 1 0 01-1-1V3a1 1 0 011-1z" stroke="currentColor" strokeWidth="1.3"/><path d="M5 5h6M5 8h6M5 11h3" stroke="currentColor" strokeWidth="1.1" strokeLinecap="round"/></svg>
           Бібліотека
         </button>
+        <button type="button" className={`${tabBase} ${activeTab === 'favorites' ? tabActive : tabInactive}`} onClick={() => { setActiveTab('favorites'); setCurrentPage(1) }}>
+          <svg width="14" height="14" viewBox="0 0 16 16" fill={activeTab === 'favorites' ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="1.2" strokeLinejoin="round"><path d="M8 12.5l-.6-.5C3.5 8.5 2 6.5 2 4.5 2 3 3.5 2 5 2c1.2 0 2.3.6 3 1.5.7-.9 1.8-1.5 3-1.5 1.5 0 3 1 3 2.5 0 2-1.5 4-5.4 7.5l-.6.5z"/></svg>
+          Улюблені
+        </button>
       </div>
 
       {/* Stats (library only) */}
       {activeTab === 'library' && (
-        <div className="grid grid-cols-4 gap-4 mb-6 max-md:grid-cols-2">
-          <div className="p-4 rounded-xl bg-white dark:bg-[#12121a] border border-slate-200 dark:border-white/5"><span className="text-2xl font-bold block text-blue-600 dark:text-blue-400">{libraryTools.length}</span><span className="text-xs text-slate-500 dark:text-gray-500">Всі інструменти</span></div>
-          <div className="p-4 rounded-xl bg-white dark:bg-[#12121a] border border-slate-200 dark:border-white/5"><span className="text-2xl font-bold block text-green-600 dark:text-green-400">0</span><span className="text-xs text-slate-500 dark:text-gray-500">Нові</span></div>
-          <div className="p-4 rounded-xl bg-white dark:bg-[#12121a] border border-slate-200 dark:border-white/5"><span className="text-2xl font-bold block text-purple-600 dark:text-purple-400">&mdash;</span><span className="text-xs text-slate-500 dark:text-gray-500">Колекції</span></div>
-          <div className="p-4 rounded-xl bg-white dark:bg-[#12121a] border border-slate-200 dark:border-white/5"><span className="text-2xl font-bold block text-amber-600 dark:text-amber-400">0</span><span className="text-xs text-slate-500 dark:text-gray-500">Популярні</span></div>
+        <div className="grid grid-cols-2 gap-4 mb-6">
+          <div className="p-4 rounded-xl bg-white dark:bg-[#12121a] border border-slate-200 dark:border-white/5 text-center"><span className="text-2xl font-bold block text-blue-600 dark:text-blue-400">{libraryStats?.total ?? libraryTools.length}</span><span className="text-xs text-slate-500 dark:text-gray-500">Всі інструменти</span></div>
+          <div className="p-4 rounded-xl bg-white dark:bg-[#12121a] border border-slate-200 dark:border-white/5 text-center"><span className="text-2xl font-bold block text-green-600 dark:text-green-400">{libraryStats?.new ?? '—'}</span><span className="text-xs text-slate-500 dark:text-gray-500">Нові</span></div>
         </div>
       )}
 
@@ -186,14 +196,14 @@ export default function ArsenalPage() {
           </span>
           <h3 className="text-lg font-semibold text-slate-700 dark:text-gray-200 mb-2">Нічого не знайдено</h3>
           <p className="text-sm text-slate-500 dark:text-gray-500 m-0">
-            {activeTab === 'my' ? 'Додайте свій перший інструмент кнопкою «Додати інструмент».' : 'Поки що немає опублікованих інструментів.'}
+            {activeTab === 'my' ? 'Додайте свій перший інструмент кнопкою «Додати інструмент».' : activeTab === 'favorites' ? 'Додайте інструменти в улюблені кнопкою-сердечком на картці.' : 'Поки що немає опублікованих інструментів.'}
           </p>
         </div>
       ) : (
         <>
           <div className="grid grid-cols-[repeat(auto-fill,minmax(320px,1fr))] gap-5">
             {paginatedTools.map((tool) => (
-              <ToolCard key={tool.id} tool={tool} isOwner={activeTab === 'my'} onPublish={() => handlePublish(tool.id)} onUnpublish={() => handleUnpublish(tool.id)} onDelete={() => handleDelete(tool.id)} />
+              <ToolCard key={tool.id} tool={tool} isOwner={activeTab === 'my'} onPublish={() => handlePublish(tool.id)} onUnpublish={() => handleUnpublish(tool.id)} onDelete={() => handleDelete(tool.id)} onFavoriteChange={handleFavoriteChange} />
             ))}
           </div>
           {totalPages > 1 && (

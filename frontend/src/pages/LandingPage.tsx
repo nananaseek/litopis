@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { getLibrary } from '../api/tools'
 import type { ToolResponse } from '../api/tools'
+import { getUsersCount, formatUsersCountDisplay } from '../api/auth'
+import { useAuth } from '../contexts/AuthContext'
 import ThemeToggle from '../components/ThemeToggle/ThemeToggle'
 
 const CATEGORIES = ['OSINT', 'Аналітика', 'Комунікації', 'Безпека', 'Моніторинг'] as const
@@ -15,8 +17,10 @@ const catColors: Record<string, string> = {
 }
 
 export default function LandingPage() {
+  const { user } = useAuth()
   const [tools, setTools] = useState<ToolResponse[]>([])
   const [loading, setLoading] = useState(true)
+  const [usersCount, setUsersCount] = useState<number | null>(null)
 
   useEffect(() => {
     getLibrary({ limit: 6 })
@@ -25,8 +29,13 @@ export default function LandingPage() {
       .finally(() => setLoading(false))
   }, [])
 
+  useEffect(() => {
+    getUsersCount()
+      .then(setUsersCount)
+      .catch(() => {})
+  }, [])
+
   const totalTools = tools.length
-  const totalCategories = new Set(tools.map((t) => t.category)).size
 
   return (
     <div className="min-h-screen bg-slate-100 text-slate-900 dark:bg-[#0b0b12] dark:text-gray-100">
@@ -46,8 +55,14 @@ export default function LandingPage() {
           </nav>
           <div className="flex items-center gap-3">
             <ThemeToggle />
-            <Link to="/login" className="text-sm text-slate-700 dark:text-gray-300 hover:text-slate-900 dark:hover:text-white transition no-underline">Увійти</Link>
-            <Link to="/register" className="px-4 py-1.5 text-sm font-medium bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition no-underline">Реєстрація</Link>
+            {user ? (
+              <Link to="/arsenal" className="px-4 py-1.5 text-sm font-medium bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition no-underline">Увійти в мій арсенал</Link>
+            ) : (
+              <>
+                <Link to="/login" className="text-sm text-slate-700 dark:text-gray-300 hover:text-slate-900 dark:hover:text-white transition no-underline">Увійти</Link>
+                <Link to="/register" className="px-4 py-1.5 text-sm font-medium bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition no-underline">Реєстрація</Link>
+              </>
+            )}
           </div>
         </div>
       </header>
@@ -72,7 +87,7 @@ export default function LandingPage() {
           <div className="flex flex-wrap items-center justify-center gap-4 mb-10">
             <Link to="/register" className="inline-flex items-center gap-2 px-5 py-2.5 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition no-underline text-sm shadow-lg shadow-blue-600/25">
               <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M3 2l5 2 5-2v11l-5 2-5-2V2z" stroke="currentColor" strokeWidth="1.3" strokeLinejoin="round"/></svg>
-              Почати безкоштовно
+              Зареєструватися
             </Link>
             <a href="#tools" className="inline-flex items-center gap-2 px-5 py-2.5 border border-slate-300 dark:border-gray-700 text-slate-700 dark:text-gray-300 rounded-lg hover:bg-slate-200 dark:hover:bg-white/5 hover:border-slate-400 dark:hover:border-gray-500 transition no-underline text-sm">
               <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M3 2h10a1 1 0 011 1v10a1 1 0 01-1 1H3a1 1 0 01-1-1V3a1 1 0 011-1z" stroke="currentColor" strokeWidth="1.3"/><path d="M5 5h6M5 8h6M5 11h3" stroke="currentColor" strokeWidth="1.1" strokeLinecap="round"/></svg>
@@ -98,8 +113,8 @@ export default function LandingPage() {
         <div className="grid grid-cols-3 gap-6">
           {[
             { value: `${totalTools || '—'}`, label: 'Інструментів', color: 'text-blue-400' },
-            { value: `${totalCategories || '—'}`, label: 'Категорій', color: 'text-purple-400' },
-            { value: '500+', label: 'Аналітиків', color: 'text-green-400' },
+            { value: '5', label: 'Категорій', color: 'text-purple-400' },
+            { value: usersCount != null ? formatUsersCountDisplay(usersCount) : '—', label: 'Аналітиків', color: 'text-green-400' },
           ].map((stat) => (
             <div key={stat.label} className="text-center">
               <div className={`text-3xl md:text-4xl font-extrabold ${stat.color}`}>{stat.value}</div>

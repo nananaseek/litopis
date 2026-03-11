@@ -121,10 +121,6 @@ export default function AddToolModal({ isOpen, onClose, onSave, initialData, edi
               />
             </div>
           </div>
-          <div className="flex flex-col gap-1.5">
-            <label className="text-sm font-medium text-slate-600 dark:text-gray-400">Іконка (емодзі)</label>
-            <button type="button" className="w-12 h-12 rounded-lg border border-slate-300 dark:border-white/10 bg-slate-100 dark:bg-white/5 text-2xl flex items-center justify-center hover:bg-slate-200 dark:hover:bg-white/10 transition" onClick={() => setForm((p) => ({ ...p, icon: '\u{1F527}' }))} title="Іконка">{form.icon}</button>
-          </div>
           <fieldset className="border border-slate-200 dark:border-white/10 rounded-lg p-4">
             <legend className="text-sm font-medium text-slate-600 dark:text-gray-400 px-1">Посилання (потрібно хоча б одне *)</legend>
             <div className="flex flex-col gap-3 mt-2">

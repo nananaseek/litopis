@@ -11,7 +11,7 @@ import LandingPage from './pages/LandingPage'
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth()
   if (loading) return <div className="flex items-center justify-center min-h-screen text-lg text-slate-500">Завантаження...</div>
-  if (!user) return <Navigate to="/login" replace />
+  if (!user) return <Navigate to="/" replace />
   return <>{children}</>
 }
 
@@ -22,7 +22,7 @@ function AppRoutes() {
 
   return (
     <Routes>
-      <Route path="/" element={user ? <Navigate to="/arsenal" replace /> : <LandingPage />} />
+      <Route path="/" element={<LandingPage />} />
       <Route path="/login" element={user ? <Navigate to="/arsenal" replace /> : <LoginPage />} />
       <Route path="/register" element={user ? <Navigate to="/arsenal" replace /> : <RegisterPage />} />
       <Route element={<ProtectedRoute><Layout /></ProtectedRoute>}>

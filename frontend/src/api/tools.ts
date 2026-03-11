@@ -19,6 +19,7 @@ export interface ToolResponse {
   average_rating: number | null
   rating_count: number
   user_rating: number | null
+  is_favorited?: boolean | null
 }
 
 export async function getMyTools(skip = 0, limit = 50): Promise<ToolResponse[]> {
@@ -101,7 +102,31 @@ export async function getLibrary(params?: {
   return data
 }
 
+export interface LibraryStats {
+  total: number
+  new: number
+}
+
+export async function getLibraryStats(): Promise<LibraryStats> {
+  const { data } = await client.get<LibraryStats>('/tools/library/stats')
+  return data
+}
+
 export async function setToolRating(toolId: string, value: number): Promise<ToolResponse> {
   const { data } = await client.put<ToolResponse>(`/tools/${toolId}/rating`, { value })
   return data
+}
+
+export async function getFavorites(skip = 0, limit = 50): Promise<ToolResponse[]> {
+  const { data } = await client.get<ToolResponse[]>('/tools/favorites', { params: { skip, limit } })
+  return data
+}
+
+export async function addFavorite(toolId: string): Promise<ToolResponse> {
+  const { data } = await client.post<ToolResponse>(`/tools/${toolId}/favorite`)
+  return data
+}
+
+export async function removeFavorite(toolId: string): Promise<void> {
+  await client.delete(`/tools/${toolId}/favorite`)
 }

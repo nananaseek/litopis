@@ -48,8 +48,10 @@ async def register(data: UserRegister):
 
 @router.post("/login", response_model=TokenPair)
 async def login(form: OAuth2PasswordRequestForm = Depends()):
-    """Accepts OAuth2 form (username + password) — works with Swagger Authorize button."""
+    """Приймає логін (ім'я користувача або email) та пароль."""
     user = await User.find_one(User.username == form.username)
+    if user is None:
+        user = await User.find_one(User.email == form.username)
     if user is None or not verify_password(form.password, user.hashed_password):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -90,3 +92,10 @@ async def me(user: User = Depends(get_current_user)):
         email=user.email,
         is_active=user.is_active,
     )
+
+
+@router.get("/users/count")
+async def users_count():
+    """Повертає кількість зареєстрованих акаунтів (публічний ендпоінт для лендингу)."""
+    count = await User.find().count()
+    return {"count": count}

@@ -21,16 +21,20 @@
 
 /* README / prose HTML rendered by GitHub — needs nested selectors */
 @layer components {
+  /* Світла тема: весь текст чорний на білому/ slate-50 */
   .readme-prose {
     font-size: 0.9375rem;
     line-height: 1.7;
-    color: #334155;
+    color: #0d0d0d;
     overflow-x: auto;
   }
+  .readme-prose * { color: #0d0d0d; }
   .readme-prose h1,
   .readme-prose h2,
   .readme-prose h3,
-  .readme-prose h4 { color: #1e293b; }
+  .readme-prose h4,
+  .readme-prose .heading-element,
+  .readme-prose .markdown-body { color: #0d0d0d; }
   .readme-prose h1 { font-size: 1.5rem; margin: 1.75rem 0 0.5rem; font-weight: 700; }
   .readme-prose h2 {
     font-size: 1.25rem; margin: 1.5rem 0 0.5rem; font-weight: 700;
@@ -42,25 +46,33 @@
   .readme-prose ul,
   .readme-prose ol { padding-left: 1.5rem; margin: 0.5rem 0; }
   .readme-prose li { margin-bottom: 0.25rem; }
+  /* Блоки коду: темний читабельний текст (перевизначає стилі з GitHub) */
+  .readme-prose pre,
+  .readme-prose pre *,
+  .readme-prose .highlight pre,
+  .readme-prose .highlight pre * {
+    color: #d0d0d0 !important;
+  }
   .readme-prose pre {
-    background: #f1f5f9; border: 1px solid #e2e8f0; border-radius: 8px;
+    background: #ffffff; border: 1px solid #e2e8f0; border-radius: 8px;
     padding: 1rem; overflow-x: auto; font-size: 0.8125rem; line-height: 1.6; margin: 0.75rem 0;
   }
   .readme-prose code {
-    background: #f1f5f9; padding: 0.15rem 0.4rem; border-radius: 4px; font-size: 0.85em;
+    background: #ffffff; padding: 0.15rem 0.4rem; border-radius: 4px; font-size: 0.85em;
     font-family: ui-monospace, SFMono-Regular, 'SF Mono', Menlo, monospace;
+    color: #1e293b !important;
   }
   .readme-prose pre code { background: none; padding: 0; }
   .readme-prose img { max-width: 100%; border-radius: 8px; margin: 0.5rem 0; }
   .readme-prose table { width: 100%; border-collapse: collapse; margin: 1rem 0; font-size: 0.875rem; }
   .readme-prose th,
-  .readme-prose td { border: 1px solid #e2e8f0; padding: 0.5rem 0.75rem; text-align: left; }
+  .readme-prose td { border: 1px solid #e2e8f0; padding: 0.5rem 0.75rem; text-align: left; color: #0d0d0d; }
   .readme-prose th { background: #f8fafc; font-weight: 600; }
-  .readme-prose a { color: #2563eb; text-decoration: none; }
+  .readme-prose a { color: #2563eb !important; text-decoration: none; }
   .readme-prose a:hover { text-decoration: underline; }
   .readme-prose blockquote {
     border-left: 3px solid #e2e8f0; padding: 0.25rem 0 0.25rem 1rem;
-    margin: 0.75rem 0; color: #64748b;
+    margin: 0.75rem 0; color: #0d0d0d;
   }
   .readme-prose hr { border: none; border-top: 1px solid #e2e8f0; margin: 1.25rem 0; }
 
@@ -79,14 +91,16 @@
 
   /* Dark variant for app (arsenal / tool detail) */
   .readme-prose.readme-prose--dark,
-  .readme-prose--dark { color: #cbd5e1; }
-  .readme-prose--dark h1, .readme-prose--dark h2, .readme-prose--dark h3, .readme-prose--dark h4 { color: #f1f5f9; }
+  .readme-prose--dark,
+  .readme-prose--dark * { color: #cbd5e1; }
+  .readme-prose--dark h1, .readme-prose--dark h2, .readme-prose--dark h3, .readme-prose--dark h4,
+  .readme-prose--dark .heading-element { color: #ffffff !important; }
   .readme-prose--dark h2 { border-bottom-color: #334155; }
-  .readme-prose--dark pre { background: #0f172a; border-color: #334155; }
-  .readme-prose--dark code { background: #0f172a; }
+  .readme-prose--dark pre { background: #0f172a; border-color: #334155; color: #cbd5e1; }
+  .readme-prose--dark code { background: #0f172a; color: #cbd5e1; }
   .readme-prose--dark th { background: #0f172a; }
-  .readme-prose--dark th, .readme-prose--dark td { border-color: #334155; }
-  .readme-prose--dark a { color: #60a5fa; }
+  .readme-prose--dark th, .readme-prose--dark td { border-color: #334155; color: #cbd5e1; }
+  .readme-prose--dark a { color: #60a5fa !important; }
   .readme-prose--dark blockquote { border-left-color: #334155; color: #94a3b8; }
   .readme-prose--dark hr { border-top-color: #334155; }
 }

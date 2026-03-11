@@ -1,12 +1,13 @@
 # Development: MongoDB + backend + frontend без nginx/acme.
-# Frontend: http://localhost:5173  Backend API: http://localhost:8000
+# Frontend: http://localhost:3000  Backend API: http://localhost:8000
+# MongoDB з хоста: localhost:27018 (щоб не конфліктувати з локальним mongo на 27017)
 
 services:
   mongodb:
     image: mongo:7
     restart: unless-stopped
     ports:
-      - "27017:27017"
+      - "27018:27017"
     volumes:
       - mongo_data_dev:/data/db
     healthcheck:
@@ -34,7 +35,7 @@ services:
         - VITE_API_URL=http://localhost:8000/api/v1
     restart: unless-stopped
     ports:
-      - "5173:80"
+      - "3000:80"
     depends_on:
       - backend
 

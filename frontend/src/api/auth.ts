@@ -32,3 +32,16 @@ export async function getMe(): Promise<UserResponse> {
   const { data } = await client.get<UserResponse>('/auth/me')
   return data
 }
+
+export async function getUsersCount(): Promise<number> {
+  const { data } = await client.get<{ count: number }>('/auth/users/count')
+  return data.count
+}
+
+/** Форматує кількість для лендингу: 1–9 як «n+», 10+ для 10–19, 20+ для 20–99, 100+ для 100–199, 200+ тощо. */
+export function formatUsersCountDisplay(n: number): string {
+  if (n < 1) return '0'
+  if (n < 10) return `${n}+`
+  if (n < 100) return `${Math.floor(n / 10) * 10}+`
+  return `${Math.floor(n / 100) * 100}+`
+}

@@ -1,6 +1,6 @@
 import logging
 import re
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 
 import httpx
 from beanie import PydanticObjectId
@@ -9,6 +9,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 
 from app.api.deps import get_current_user, get_current_user_optional
 from app.core.events import broadcast
+from app.models.favorite import ToolFavorite
 from app.models.rating import ToolRating
 from app.models.tool import Tool
 from app.models.user import User
@@ -20,7 +21,11 @@ router = APIRouter(prefix="/tools", tags=["tools"])
 _GITHUB_REPO_RE = re.compile(r"github\.com/([^/]+/[^/#?]+)")
 
 
-def _tool_to_response(tool: Tool, user_rating: int | None = None) -> ToolResponse:
+def _tool_to_response(
+    tool: Tool,
+    user_rating: int | None = None,
+    is_favorited: bool | None = None,
+) -> ToolResponse:
     return ToolResponse(
         id=str(tool.id),
         name=tool.name,
@@ -39,6 +44,7 @@ def _tool_to_response(tool: Tool, user_rating: int | None = None) -> ToolRespons
         average_rating=getattr(tool, "average_rating", None),
         rating_count=getattr(tool, "rating_count", 0) or 0,
         user_rating=user_rating,
+        is_favorited=is_favorited,
     )
 
 
@@ -90,6 +96,11 @@ async def _get_own_tool(tool_id: str, user: User) -> Tool:
     return tool
 
 
+async def _user_favorite_tool_ids(user_id: PydanticObjectId) -> set[PydanticObjectId]:
+    favs = await ToolFavorite.find(ToolFavorite.user_id == user_id).to_list()
+    return {f.tool_id for f in favs}
+
+
 @router.get("/my", response_model=list[ToolResponse])
 async def get_my_tools(
     user: User = Depends(get_current_user),
@@ -103,7 +114,8 @@ async def get_my_tools(
         .limit(limit)
         .to_list()
     )
-    return [_tool_to_response(t) for t in tools]
+    fav_ids = await _user_favorite_tool_ids(user.id)
+    return [_tool_to_response(t, is_favorited=t.id in fav_ids) for t in tools]
 
 
 @router.post("/", response_model=ToolResponse, status_code=status.HTTP_201_CREATED)
@@ -122,6 +134,18 @@ async def create_tool(data: ToolCreate, user: User = Depends(get_current_user)):
     )
     await tool.insert()
     return _tool_to_response(tool)
+
+
+@router.get("/library/stats")
+async def get_library_stats():
+    """Кількість опублікованих інструментів: всього та нових (доданих за останні 5 днів)."""
+    total = await Tool.find(Tool.is_published == True).count()  # noqa: E712
+    cutoff = datetime.now(UTC) - timedelta(days=5)
+    new = await Tool.find(
+        Tool.is_published == True,  # noqa: E712
+        Tool.created_at >= cutoff,
+    ).count()
+    return {"total": total, "new": new}
 
 
 @router.get("/library", response_model=list[ToolResponse])
@@ -151,6 +175,7 @@ async def get_library(
         query = query.find(Tool.average_rating >= float(min_rating))
     tools = await query.sort(-Tool.created_at).skip(skip).limit(limit).to_list()
     user_ratings_map: dict[str, int] = {}
+    fav_ids: set[PydanticObjectId] = set()
     if user and tools:
         tool_ids = [t.id for t in tools]
         ratings = await ToolRating.find(
@@ -159,7 +184,73 @@ async def get_library(
         ).to_list()
         for r in ratings:
             user_ratings_map[str(r.tool_id)] = r.value
-    return [_tool_to_response(t, user_ratings_map.get(str(t.id))) for t in tools]
+        fav_ids = await _user_favorite_tool_ids(user.id)
+    return [
+        _tool_to_response(t, user_ratings_map.get(str(t.id)), is_favorited=t.id in fav_ids if user else None)
+        for t in tools
+    ]
+
+
+@router.get("/favorites", response_model=list[ToolResponse])
+async def get_favorites(
+    user: User = Depends(get_current_user),
+    skip: int = Query(0, ge=0),
+    limit: int = Query(50, ge=1, le=100),
+):
+    """Список інструментів, доданих у улюблені поточним користувачем."""
+    favs = (
+        await ToolFavorite.find(ToolFavorite.user_id == user.id)
+        .skip(skip)
+        .limit(limit)
+        .to_list()
+    )
+    if not favs:
+        return []
+    tool_ids = [f.tool_id for f in favs]
+    tools = await Tool.find(In(Tool.id, tool_ids)).to_list()
+    tools_by_id = {t.id: t for t in tools}
+    fav_ids = set(tool_ids)
+    return [
+        _tool_to_response(tools_by_id[tid], is_favorited=True)
+        for tid in tool_ids
+        if tid in tools_by_id
+    ]
+
+
+@router.post("/{tool_id}/favorite", response_model=ToolResponse)
+async def add_favorite(tool_id: str, user: User = Depends(get_current_user)):
+    """Додати інструмент у улюблені."""
+    try:
+        oid = PydanticObjectId(tool_id)
+    except Exception:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Невалідний ID")
+    tool = await Tool.get(oid)
+    if tool is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Інструмент не знайдено")
+    existing = await ToolFavorite.find_one(
+        ToolFavorite.user_id == user.id,
+        ToolFavorite.tool_id == oid,
+    )
+    if existing:
+        return _tool_to_response(tool, is_favorited=True)
+    await ToolFavorite(user_id=user.id, tool_id=oid).insert()
+    return _tool_to_response(tool, is_favorited=True)
+
+
+@router.delete("/{tool_id}/favorite", status_code=status.HTTP_204_NO_CONTENT)
+async def remove_favorite(tool_id: str, user: User = Depends(get_current_user)):
+    """Прибрати інструмент з улюблених."""
+    try:
+        oid = PydanticObjectId(tool_id)
+    except Exception:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Невалідний ID")
+    fav = await ToolFavorite.find_one(
+        ToolFavorite.user_id == user.id,
+        ToolFavorite.tool_id == oid,
+    )
+    if fav:
+        await fav.delete()
+    return None
 
 
 @router.get("/detail/{tool_id}", response_model=ToolDetailResponse)
@@ -177,6 +268,7 @@ async def get_tool_detail(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Інструмент не знайдено")
 
     user_rating = None
+    is_favorited = None
     if user:
         rating_doc = await ToolRating.find_one(
             ToolRating.tool_id == oid,
@@ -184,7 +276,9 @@ async def get_tool_detail(
         )
         if rating_doc:
             user_rating = rating_doc.value
-    resp = _tool_to_response(tool, user_rating)
+        fav = await ToolFavorite.find_one(ToolFavorite.user_id == user.id, ToolFavorite.tool_id == oid)
+        is_favorited = fav is not None
+    resp = _tool_to_response(tool, user_rating, is_favorited=is_favorited)
     return ToolDetailResponse(
         **resp.model_dump(),
         readme_content=tool.readme_content,
@@ -195,7 +289,8 @@ async def get_tool_detail(
 @router.get("/{tool_id}", response_model=ToolResponse)
 async def get_tool(tool_id: str, user: User = Depends(get_current_user)):
     tool = await _get_own_tool(tool_id, user)
-    return _tool_to_response(tool)
+    fav = await ToolFavorite.find_one(ToolFavorite.user_id == user.id, ToolFavorite.tool_id == tool.id)
+    return _tool_to_response(tool, is_favorited=fav is not None)
 
 
 @router.put("/{tool_id}", response_model=ToolResponse)

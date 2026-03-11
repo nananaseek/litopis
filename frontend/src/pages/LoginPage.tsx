@@ -33,12 +33,13 @@ export default function LoginPage() {
         <h1 className="text-xl font-bold text-slate-800 text-center mb-6 dark:text-slate-100">Вхід у Літопис</h1>
         {error && <p className="text-sm text-red-600 bg-red-50 rounded-lg px-3 py-2 mb-4 dark:bg-red-900/30 dark:text-red-400">{error}</p>}
         <div className="flex flex-col gap-1.5 mb-4">
-          <label htmlFor="login-user" className="text-sm font-medium text-slate-600 dark:text-slate-300">Ім&apos;я користувача</label>
+          <label htmlFor="login-user" className="text-sm font-medium text-slate-600 dark:text-slate-300">Ім&apos;я користувача або email</label>
           <input
             id="login-user"
             type="text"
             required
             autoComplete="username"
+            placeholder="Логін або email"
             value={username}
             onChange={(e) => setUsername(e.target.value)}
             className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm bg-white text-slate-800 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition dark:bg-slate-700 dark:border-slate-600 dark:text-slate-100 dark:focus:ring-blue-900/40"

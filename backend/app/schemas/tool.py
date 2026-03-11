@@ -54,6 +54,7 @@ class ToolResponse(BaseModel):
     average_rating: float | None = None
     rating_count: int = 0
     user_rating: int | None = None  # рейтинг поточного користувача (1–5), якщо є
+    is_favorited: bool | None = None  # чи в улюблених у поточного користувача
 
 
 class ToolRatingSet(BaseModel):

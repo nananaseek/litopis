@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import DOMPurify from 'dompurify'
-import { getToolDetail, updateTool, refreshReadme, setToolRating } from '../api/tools'
+import { getToolDetail, updateTool, refreshReadme, setToolRating, addFavorite, removeFavorite } from '../api/tools'
 import type { ToolDetailResponse } from '../api/tools'
 import type { ToolCategory } from '../types/arsenal'
 import { useAuth } from '../contexts/AuthContext'
@@ -47,6 +47,7 @@ export default function ToolDetailPage() {
   const [aboutDraft, setAboutDraft] = useState('')
   const [aboutSaving, setAboutSaving] = useState(false)
   const [ratingSubmitting, setRatingSubmitting] = useState(false)
+  const [favoriteLoading, setFavoriteLoading] = useState(false)
 
   const loadTool = useCallback(() => {
     if (!id) return; setLoading(true)
@@ -97,6 +98,20 @@ export default function ToolDetailPage() {
       const updated = await setToolRating(id, value)
       setTool((prev) => prev ? { ...prev, average_rating: updated.average_rating, rating_count: updated.rating_count, user_rating: updated.user_rating } : null)
     } catch { /* interceptor */ } finally { setRatingSubmitting(false) }
+  }
+
+  const handleToggleFavorite = async () => {
+    if (!id || !user) return
+    setFavoriteLoading(true)
+    try {
+      if (tool?.is_favorited) {
+        await removeFavorite(id)
+        setTool((prev) => prev ? { ...prev, is_favorited: false } : null)
+      } else {
+        await addFavorite(id)
+        setTool((prev) => prev ? { ...prev, is_favorited: true } : null)
+      }
+    } catch { /* interceptor */ } finally { setFavoriteLoading(false) }
   }
 
   if (loading) {
@@ -179,6 +194,12 @@ export default function ToolDetailPage() {
                 GitHub
               </a>
             )}
+            {!editing && user && (
+              <button type="button" className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-[0.8125rem] font-medium rounded-lg border transition shrink-0 disabled:opacity-60 disabled:cursor-not-allowed ${tool.is_favorited ? 'bg-red-500/15 border-red-500/30 text-red-500 dark:text-red-400 hover:bg-red-500/25' : 'border-slate-300 dark:border-white/10 text-slate-600 dark:text-gray-400 hover:bg-slate-100 dark:hover:bg-white/5 hover:text-red-500 dark:hover:text-red-400 hover:border-red-500/30'}`} onClick={handleToggleFavorite} disabled={favoriteLoading} title={tool.is_favorited ? 'Прибрати з улюблених' : 'Додати в улюблені'}>
+                <svg width="16" height="16" viewBox="0 0 16 16" fill={tool.is_favorited ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="1.2" strokeLinejoin="round"><path d="M8 12.5l-.6-.5C3.5 8.5 2 6.5 2 4.5 2 3 3.5 2 5 2c1.2 0 2.3.6 3 1.5.7-.9 1.8-1.5 3-1.5 1.5 0 3 1 3 2.5 0 2-1.5 4-5.4 7.5l-.6.5z"/></svg>
+                {tool.is_favorited ? 'Прибрати з улюблених' : 'Додати в улюблені'}
+              </button>
+            )}
           </div>
         </div>
 
@@ -221,9 +242,9 @@ export default function ToolDetailPage() {
         )}
 
         {/* Info box */}
-        <div className="bg-slate-50 dark:bg-[#0b0b12] border border-slate-200 dark:border-white/5 rounded-xl p-4 flex flex-col gap-3 mb-5">
+        <div className="bg-slate-50 dark:bg-[#0b0b12] border border-slate-200 dark:border-white/5 rounded-xl p-4 flex flex-row flex-wrap gap-4 md:gap-6 mb-5">
           {/* Category */}
-          <div className="flex flex-col gap-1">
+          <div className="flex flex-col gap-1 min-w-0 flex-1 basis-28">
             <span className="text-xs font-semibold text-slate-500 dark:text-gray-500 uppercase tracking-wide">Категорія</span>
             {editing ? (
               <select className={`${editInput} text-[0.8125rem] py-1 w-auto`} value={d.category} onChange={(e) => setDraft({ ...d, category: e.target.value as ToolCategory })}>
@@ -234,7 +255,7 @@ export default function ToolDetailPage() {
             )}
           </div>
           {/* Tags */}
-          <div className="flex flex-col gap-1">
+          <div className="flex flex-col gap-1 min-w-0 flex-1 basis-40">
             <span className="text-xs font-semibold text-slate-500 dark:text-gray-500 uppercase tracking-wide">Теги</span>
             {editing ? (
               <div className="flex flex-wrap gap-1.5 p-1.5 border border-blue-500/50 rounded-lg bg-white dark:bg-[#12121a] min-h-9 items-center max-w-md focus-within:ring-2 focus-within:ring-blue-500/20">
@@ -256,7 +277,7 @@ export default function ToolDetailPage() {
             )}
           </div>
           {/* License */}
-          <div className="flex flex-col gap-1">
+          <div className="flex flex-col gap-1 min-w-0 flex-1 basis-28">
             <span className="text-xs font-semibold text-slate-500 dark:text-gray-500 uppercase tracking-wide">Ліцензія</span>
             {editing ? (
               <input className={editInputSm} value={d.license} onChange={(e) => setDraft({ ...d, license: e.target.value })} placeholder="MIT, GPL, ..." />
