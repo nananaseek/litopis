@@ -18,7 +18,7 @@ type ImportResult = {
   errors: string[]
 }
 
-function normalizeItem(raw: Record<string, unknown>, index: number): ToolFormData | null {
+function normalizeItem(raw: Record<string, unknown>): ToolFormData | null {
   const get = (...keys: string[]): string => {
     for (const k of keys) {
       const v = raw[k]
@@ -65,7 +65,7 @@ function validateAndNormalize(
     if (raw === null || typeof raw !== 'object' || Array.isArray(raw)) {
       return { items: [], error: `Елемент ${i + 1}: очікується об’єкт` }
     }
-    const item = normalizeItem(raw as Record<string, unknown>, i)
+    const item = normalizeItem(raw as Record<string, unknown>)
     if (!item) {
       return {
         items: [],
