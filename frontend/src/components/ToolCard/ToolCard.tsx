@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import type { ToolResponse } from '../../api/tools'
 import * as toolsApi from '../../api/tools'
 import StarRating from '../StarRating/StarRating'
+import { useAuth } from '../../contexts/AuthContext'
 
 interface ToolCardProps {
   tool: ToolResponse
@@ -11,6 +12,7 @@ interface ToolCardProps {
   onUnpublish?: () => void
   onDeleteRequest?: (id: string, name: string) => void
   onFavoriteChange?: (toolId: string, isFavorited: boolean) => void
+  onRatingChange?: (toolId: string, updated: ToolResponse) => void
 }
 
 const catColors: Record<string, string> = {
@@ -21,15 +23,30 @@ const catColors: Record<string, string> = {
   'моніторинг': 'bg-amber-500/20 text-amber-400 border-amber-500/30',
 }
 
-export default function ToolCard({ tool, isOwner, onPublish, onUnpublish, onDeleteRequest, onFavoriteChange }: ToolCardProps) {
+export default function ToolCard({ tool, isOwner, onPublish, onUnpublish, onDeleteRequest, onFavoriteChange, onRatingChange }: ToolCardProps) {
   const navigate = useNavigate()
+  const { user } = useAuth()
   const [favorited, setFavorited] = useState(!!tool.is_favorited)
   const [favoriteLoading, setFavoriteLoading] = useState(false)
+  const [ratingSubmitting, setRatingSubmitting] = useState(false)
+  const [displayRating, setDisplayRating] = useState<ToolResponse['user_rating']>(tool.user_rating ?? null)
   useEffect(() => { setFavorited(!!tool.is_favorited) }, [tool.is_favorited])
+  useEffect(() => { setDisplayRating(tool.user_rating ?? null) }, [tool.user_rating])
   const catCls = catColors[tool.category.toLowerCase()] ?? 'bg-blue-500/20 text-blue-400 border-blue-500/30'
   const btnBase = 'inline-flex items-center gap-1 px-3 py-1.5 text-sm font-medium rounded-lg transition-opacity hover:opacity-90'
+  const canRate = !!user && tool.is_published
 
   const goToTool = () => navigate(`/tools/${tool.id}`)
+
+  const handleSetRating = async (value: number) => {
+    if (ratingSubmitting) return
+    setRatingSubmitting(true)
+    try {
+      const updated = await toolsApi.setToolRating(tool.id, value)
+      setDisplayRating(updated.user_rating ?? value)
+      onRatingChange?.(tool.id, updated)
+    } catch { /* interceptor */ } finally { setRatingSubmitting(false) }
+  }
 
   const handleFavoriteClick = async (e: React.MouseEvent) => {
     e.stopPropagation()
@@ -77,42 +94,62 @@ export default function ToolCard({ tool, isOwner, onPublish, onUnpublish, onDele
         </div>
       )}
       <p className="text-sm text-slate-500 dark:text-gray-500 m-0 leading-relaxed">{tool.description}</p>
-      <StarRating value={tool.average_rating ?? null} count={tool.rating_count ?? 0} size="sm" />
+      <div className="flex flex-wrap items-center gap-2" onClick={(e) => e.stopPropagation()}>
+        <StarRating value={tool.average_rating ?? null} count={tool.rating_count ?? 0} size="sm" />
+        {canRate && (
+          <span className="inline-flex items-center gap-1 text-xs text-slate-500 dark:text-gray-500">
+            Мій рейтинг:
+            <StarRating
+              value={displayRating ?? null}
+              size="sm"
+              interactive
+              onChange={handleSetRating}
+            />
+            {ratingSubmitting && <span className="text-slate-400">...</span>}
+          </span>
+        )}
+      </div>
       <div className="flex flex-wrap gap-2 text-[0.8125rem] text-slate-500 dark:text-gray-500">
         {tool.license && <span>Ліцензія: {tool.license}</span>}
         {tool.is_published && <span className="text-green-400 font-medium">Опубліковано</span>}
       </div>
-      <div className="flex flex-wrap gap-2 mt-auto pt-1" onClick={(e) => e.stopPropagation()}>
-        <button type="button" className={`w-9 h-9 flex items-center justify-center rounded-lg border transition shrink-0 ${favorited ? 'bg-red-500/15 border-red-500/30 text-red-500 dark:text-red-400' : 'border-slate-300 dark:border-white/10 text-slate-500 dark:text-gray-400 hover:bg-slate-100 dark:hover:bg-white/5 hover:text-red-500 dark:hover:text-red-400'}`} onClick={handleFavoriteClick} disabled={favoriteLoading} title={favorited ? 'Прибрати з улюблених' : 'Додати в улюблені'} aria-label={favorited ? 'Прибрати з улюблених' : 'Додати в улюблені'}>
-          <svg width="18" height="18" viewBox="0 0 16 16" fill={favorited ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="1.2" strokeLinejoin="round"><path d="M8 12.5l-.6-.5C3.5 8.5 2 6.5 2 4.5 2 3 3.5 2 5 2c1.2 0 2.3.6 3 1.5.7-.9 1.8-1.5 3-1.5 1.5 0 3 1 3 2.5 0 2-1.5 4-5.4 7.5l-.6.5z"/></svg>
-        </button>
-        {tool.github_url && (
-          <a href={tool.github_url} target="_blank" rel="noopener noreferrer" className={`${btnBase} bg-slate-200 dark:bg-white/10 text-slate-700 dark:text-gray-300 border border-slate-300 dark:border-white/10 hover:bg-slate-300 dark:hover:bg-white/15`}>GitHub</a>
-        )}
-        {tool.official_url && (
-          <a href={tool.official_url} target="_blank" rel="noopener noreferrer" className={`${btnBase} bg-blue-600 text-white`}>Сайт</a>
-        )}
-        {tool.download_url && (
-          <a href={tool.download_url} target="_blank" rel="noopener noreferrer" className={`${btnBase} bg-green-500 text-white`}>Завантажити</a>
-        )}
-        {isOwner && !tool.is_published && onPublish && (
-          <button type="button" className={`${btnBase} bg-green-500 text-white`} onClick={onPublish}>Опублікувати</button>
-        )}
-        {isOwner && tool.is_published && onUnpublish && (
-          <button type="button" className={`${btnBase} bg-amber-500 text-white`} onClick={onUnpublish}>Зняти</button>
-        )}
-        {isOwner && onDeleteRequest && (
-          <button
-            type="button"
-            className={`${btnBase} bg-red-500 text-white`}
-            onClick={(e) => {
-              e.preventDefault()
-              e.stopPropagation()
-              onDeleteRequest(tool.id, tool.name)
-            }}
-          >
-            Видалити
+      <div className="mt-auto pt-1 space-y-2" onClick={(e) => e.stopPropagation()}>
+        <div className="flex flex-wrap items-center gap-1.5">
+          <button type="button" className={`w-9 h-9 flex items-center justify-center rounded-lg border transition shrink-0 ${favorited ? 'bg-red-500/15 border-red-500/30 text-red-500 dark:text-red-400' : 'border-slate-300 dark:border-white/10 text-slate-500 dark:text-gray-400 hover:bg-slate-100 dark:hover:bg-white/5 hover:text-red-500 dark:hover:text-red-400'}`} onClick={handleFavoriteClick} disabled={favoriteLoading} title={favorited ? 'Прибрати з улюблених' : 'Додати в улюблені'} aria-label={favorited ? 'Прибрати з улюблених' : 'Додати в улюблені'}>
+            <svg width="18" height="18" viewBox="0 0 16 16" fill={favorited ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="1.2" strokeLinejoin="round"><path d="M8 12.5l-.6-.5C3.5 8.5 2 6.5 2 4.5 2 3 3.5 2 5 2c1.2 0 2.3.6 3 1.5.7-.9 1.8-1.5 3-1.5 1.5 0 3 1 3 2.5 0 2-1.5 4-5.4 7.5l-.6.5z"/></svg>
           </button>
+          {tool.github_url && (
+            <a href={tool.github_url} target="_blank" rel="noopener noreferrer" className={`${btnBase} shrink-0 bg-slate-200 dark:bg-white/10 text-slate-700 dark:text-gray-300 border border-slate-300 dark:border-white/10 hover:bg-slate-300 dark:hover:bg-white/15`}>GitHub</a>
+          )}
+          {tool.official_url && (
+            <a href={tool.official_url} target="_blank" rel="noopener noreferrer" className={`${btnBase} shrink-0 bg-blue-600 text-white`}>Сайт</a>
+          )}
+          {tool.download_url && (
+            <a href={tool.download_url} target="_blank" rel="noopener noreferrer" className={`${btnBase} shrink-0 bg-green-500 text-white`}>Завантажити</a>
+          )}
+        </div>
+        {isOwner && (onPublish || onUnpublish || onDeleteRequest) && (
+          <div className="flex flex-wrap items-center gap-1.5 pt-0.5 border-t border-slate-100 dark:border-white/5">
+            {!tool.is_published && onPublish && (
+              <button type="button" className={`${btnBase} shrink-0 bg-green-500 text-white`} onClick={onPublish}>Опублікувати</button>
+            )}
+            {tool.is_published && onUnpublish && (
+              <button type="button" className={`${btnBase} shrink-0 bg-amber-500 text-white`} onClick={onUnpublish}>Зняти</button>
+            )}
+            {onDeleteRequest && (
+              <button
+                type="button"
+                className={`${btnBase} shrink-0 bg-red-500 text-white ml-auto`}
+                onClick={(e) => {
+                  e.preventDefault()
+                  e.stopPropagation()
+                  onDeleteRequest(tool.id, tool.name)
+                }}
+              >
+                Видалити
+              </button>
+            )}
+          </div>
         )}
       </div>
     </article>

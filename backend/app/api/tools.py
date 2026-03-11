@@ -103,6 +103,7 @@ async def get_my_tools(
     limit: int = Query(50, ge=1, le=100),
     category: str | None = Query(None, description="Фільтр по категорії"),
     search: str | None = Query(None, description="Пошук по назві, опису, тегах"),
+    sort: str = Query("popularity", description="popularity | name"),
 ):
     query = Tool.find(Tool.owner_id == user.id)
     if category:
@@ -118,7 +119,11 @@ async def get_my_tools(
             }
         )
     total = await query.count()
-    tools = await query.sort(-Tool.created_at).skip(skip).limit(limit).to_list()
+    if sort == "name":
+        query = query.sort(Tool.name)
+    else:
+        query = query.sort(-Tool.average_rating, -Tool.created_at)
+    tools = await query.skip(skip).limit(limit).to_list()
     if not tools:
         return MyToolsResponse(items=[], total=total)
     tool_ids = [t.id for t in tools]
@@ -169,6 +174,7 @@ async def get_library(
     search: str | None = Query(None),
     tag: str | None = Query(None),
     min_rating: int | None = Query(None, ge=1, le=5, description="Мінімальний середній рейтинг (1-5)"),
+    sort: str = Query("popularity", description="popularity | name"),
     user: User | None = Depends(get_current_user_optional),
 ):
     query = Tool.find(Tool.is_published == True)  # noqa: E712
@@ -187,7 +193,11 @@ async def get_library(
     if min_rating is not None:
         query = query.find(Tool.average_rating >= float(min_rating))
     total = await query.count()
-    tools = await query.sort(-Tool.created_at).skip(skip).limit(limit).to_list()
+    if sort == "name":
+        query = query.sort(Tool.name)
+    else:
+        query = query.sort(-Tool.average_rating, -Tool.created_at)
+    tools = await query.skip(skip).limit(limit).to_list()
     user_ratings_map: dict[str, int] = {}
     fav_ids: set[PydanticObjectId] = set()
     if user and tools:

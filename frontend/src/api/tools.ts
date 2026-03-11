@@ -30,7 +30,7 @@ export interface MyToolsResponse {
 export async function getMyTools(
   skip = 0,
   limit = 50,
-  params?: { category?: string; search?: string }
+  params?: { category?: string; search?: string; sort?: string }
 ): Promise<MyToolsResponse> {
   const { data } = await client.get<MyToolsResponse>('/tools/my', {
     params: { skip, limit, ...params },
@@ -113,6 +113,7 @@ export async function getLibrary(params?: {
   category?: string
   search?: string
   min_rating?: number
+  sort?: string
 }): Promise<LibraryListResponse> {
   const { data } = await client.get<LibraryListResponse>('/tools/library', { params })
   return data

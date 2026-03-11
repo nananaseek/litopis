@@ -224,6 +224,13 @@ export default function ToolDetailPage() {
           </div>
         )}
 
+        {/* Підказка для неавторизованих */}
+        {!editing && !user && tool.is_published && (
+          <p className="text-sm text-slate-500 dark:text-gray-500 mb-5 pb-5 border-b border-slate-200 dark:border-white/5">
+            <Link to="/login" className="text-blue-500 dark:text-blue-400 hover:underline">Увійдіть</Link>, щоб поставити рейтинг інструменту.
+          </p>
+        )}
+
         {/* My rating — окремий блок для авторизованих */}
         {!editing && user && tool.is_published && (
           <div className="mb-5 pb-5 border-b border-slate-200 dark:border-white/5">

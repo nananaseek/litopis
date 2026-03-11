@@ -19,13 +19,17 @@ const catColors: Record<string, string> = {
 export default function LandingPage() {
   const { user } = useAuth()
   const [tools, setTools] = useState<ToolResponse[]>([])
+  const [toolsTotal, setToolsTotal] = useState(0)
   const [loading, setLoading] = useState(true)
   const [usersCount, setUsersCount] = useState<number | null>(null)
 
   useEffect(() => {
     getLibrary({ limit: 6 })
-      .then((data) => setTools(Array.isArray(data) ? data : []))
-      .catch(() => setTools([]))
+      .then((data) => {
+        setTools(data.items ?? [])
+        setToolsTotal(data.total ?? 0)
+      })
+      .catch(() => { setTools([]); setToolsTotal(0) })
       .finally(() => setLoading(false))
   }, [])
 
@@ -36,7 +40,7 @@ export default function LandingPage() {
   }, [])
 
   const toolsList = Array.isArray(tools) ? tools : []
-  const totalTools = toolsList.length
+  const totalTools = toolsTotal
 
   return (
     <div className="min-h-screen bg-slate-100 text-slate-900 dark:bg-[#0b0b12] dark:text-gray-100">
@@ -127,10 +131,9 @@ export default function LandingPage() {
 
       {/* Feature cards */}
       <section className="max-w-5xl mx-auto px-6 pb-16">
-        <div className="grid md:grid-cols-3 gap-5">
+        <div className="grid md:grid-cols-2 gap-6 max-w-3xl mx-auto">
           {[
             { icon: '🔄', title: 'Останні інструменти', desc: 'Нещодавно додані', link: 'Дивитись інструменти', count: `${totalTools} інстр.` },
-            { icon: '⭐', title: 'Рекомендовані', desc: 'Обрані спільнотою', link: 'Дивитись рекомендації', count: 'Курація' },
             { icon: '📂', title: 'Категорії', desc: 'Організований каталог', link: 'Переглянути категорії', count: `${CATEGORIES.length} категорій` },
           ].map((card) => (
             <div key={card.title} className="bg-white dark:bg-[#12121a] border border-slate-200 dark:border-white/5 rounded-xl p-5 hover:border-slate-300 dark:hover:border-white/10 transition group">

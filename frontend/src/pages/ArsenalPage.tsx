@@ -37,7 +37,7 @@ export default function ArsenalPage() {
       const data = await toolsApi.getMyTools(
         (currentPage - 1) * pageSize,
         pageSize,
-        { category, search: search || undefined }
+        { category, search: search || undefined, sort: sortBy }
       )
       setMyTools(data.items)
       setMyToolsTotal(data.total)
@@ -47,7 +47,7 @@ export default function ArsenalPage() {
     } finally {
       setLoading(false)
     }
-  }, [currentPage, pageSize, categoryFilter, search])
+  }, [currentPage, pageSize, categoryFilter, search, sortBy])
 
   const loadLibrary = useCallback(async () => {
     setLoading(true)
@@ -59,6 +59,7 @@ export default function ArsenalPage() {
         category,
         search: search || undefined,
         min_rating: minRating ?? undefined,
+        sort: sortBy,
       })
       setLibraryTools(data.items)
       setLibraryToolsTotal(data.total)
@@ -70,7 +71,7 @@ export default function ArsenalPage() {
     } finally {
       setLoading(false)
     }
-  }, [currentPage, pageSize, categoryFilter, search, minRating])
+  }, [currentPage, pageSize, categoryFilter, search, minRating, sortBy])
 
   const loadFavorites = useCallback(async () => {
     setLoading(true)
@@ -99,6 +100,7 @@ export default function ArsenalPage() {
       return matchSearch && matchCategory
     })
     if (sortBy === 'name') list = [...list].sort((a, b) => a.name.localeCompare(b.name))
+    else list = [...list].sort((a, b) => (b.average_rating ?? 0) - (a.average_rating ?? 0) || new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
     return list
   }, [activeTab, toolsList, search, categoryFilter, sortBy])
 
@@ -140,6 +142,12 @@ export default function ArsenalPage() {
     setMyTools((prev) => prev.map((t) => (t.id === toolId ? { ...t, is_favorited: isFavorited } : t)))
     setLibraryTools((prev) => prev.map((t) => (t.id === toolId ? { ...t, is_favorited: isFavorited } : t)))
     setFavoriteTools((prev) => (isFavorited ? prev : prev.filter((t) => t.id !== toolId)))
+  }, [])
+
+  const handleRatingChange = useCallback((toolId: string, updated: ToolResponse) => {
+    setMyTools((prev) => prev.map((t) => (t.id === toolId ? { ...t, average_rating: updated.average_rating, rating_count: updated.rating_count, user_rating: updated.user_rating } : t)))
+    setLibraryTools((prev) => prev.map((t) => (t.id === toolId ? { ...t, average_rating: updated.average_rating, rating_count: updated.rating_count, user_rating: updated.user_rating } : t)))
+    setFavoriteTools((prev) => prev.map((t) => (t.id === toolId ? { ...t, average_rating: updated.average_rating, rating_count: updated.rating_count, user_rating: updated.user_rating } : t)))
   }, [])
 
   const tabBase = 'inline-flex items-center gap-1.5 px-4 py-2 text-sm font-medium rounded-lg border transition-colors cursor-pointer'
@@ -220,7 +228,7 @@ export default function ArsenalPage() {
           <button type="button" className="w-9 h-9 flex items-center justify-center border border-slate-300 dark:border-white/10 rounded-lg bg-white dark:bg-[#12121a] text-slate-600 dark:text-gray-400 hover:bg-slate-100 dark:hover:bg-white/5 hover:text-blue-500 dark:hover:text-blue-400 hover:border-blue-500/30 transition" title="Фільтри">
             <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M2 3h12M4 8h8M6 13h4" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/></svg>
           </button>
-          <select className="px-3 py-2 text-sm border border-slate-300 dark:border-white/10 rounded-lg bg-white dark:bg-[#12121a] text-slate-700 dark:text-gray-300 cursor-pointer hover:border-slate-400 dark:hover:border-white/20 focus:border-blue-500/50 outline-none" value={sortBy} onChange={(e) => setSortBy(e.target.value)}>
+          <select className="px-3 py-2 text-sm border border-slate-300 dark:border-white/10 rounded-lg bg-white dark:bg-[#12121a] text-slate-700 dark:text-gray-300 cursor-pointer hover:border-slate-400 dark:hover:border-white/20 focus:border-blue-500/50 outline-none" value={sortBy} onChange={(e) => { setSortBy(e.target.value); setCurrentPage(1) }}>
             <option value="popularity">За популярністю</option>
             <option value="name">За назвою</option>
           </select>
@@ -270,7 +278,7 @@ export default function ArsenalPage() {
         <>
           <div className="grid grid-cols-[repeat(auto-fill,minmax(320px,1fr))] gap-5">
             {paginatedTools.map((tool) => (
-              <ToolCard key={tool.id} tool={tool} isOwner={activeTab === 'my'} onPublish={() => handlePublish(tool.id)} onUnpublish={() => handleUnpublish(tool.id)} onDeleteRequest={(id, name) => setPendingDelete({ id, name })} onFavoriteChange={handleFavoriteChange} />
+              <ToolCard key={tool.id} tool={tool} isOwner={activeTab === 'my'} onPublish={() => handlePublish(tool.id)} onUnpublish={() => handleUnpublish(tool.id)} onDeleteRequest={(id, name) => setPendingDelete({ id, name })} onFavoriteChange={handleFavoriteChange} onRatingChange={handleRatingChange} />
             ))}
           </div>
           {totalPages > 1 && (
