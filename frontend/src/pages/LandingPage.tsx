@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
-import { getLibrary, getLibraryStats } from '../api/tools'
+import { getLibrary, getLibraryStats, addFavorite } from '../api/tools'
 import type { ToolResponse } from '../api/tools'
 import { getUsersCount, formatUsersCountDisplay } from '../api/auth'
 import { useAuth } from '../contexts/AuthContext'
@@ -24,6 +24,7 @@ export default function LandingPage() {
   const [loading, setLoading] = useState(true)
   const [usersCount, setUsersCount] = useState<number | null>(null)
   const [categoryCounts, setCategoryCounts] = useState<Record<string, number>>({})
+  const [favoriteAddingId, setFavoriteAddingId] = useState<string | null>(null)
 
   useEffect(() => {
     getLibrary({ limit: 6 })
@@ -233,8 +234,43 @@ export default function LandingPage() {
                     )}
                   </div>
                   <div className="flex gap-2 mt-auto pt-1">
-                    <Link to="/login" className="flex-1 py-1.5 text-center text-[0.8125rem] font-medium bg-slate-100 dark:bg-white/5 rounded-lg text-slate-700 dark:text-gray-300 no-underline hover:bg-slate-200 dark:hover:bg-white/10 transition">Переглянути</Link>
-                    <Link to="/login" className="flex-1 py-1.5 text-center text-[0.8125rem] font-medium bg-blue-600/20 text-blue-600 dark:text-blue-400 rounded-lg no-underline hover:bg-blue-600/30 transition">Деталі</Link>
+                    {user ? (
+                      <button
+                        type="button"
+                        disabled={!!tool.is_favorited || favoriteAddingId === tool.id}
+                        onClick={async () => {
+                          setFavoriteAddingId(tool.id)
+                          try {
+                            await addFavorite(tool.id)
+                            setTools((prev) => prev.map((t) => (t.id === tool.id ? { ...t, is_favorited: true } : t)))
+                          } finally {
+                            setFavoriteAddingId(null)
+                          }
+                        }}
+                        title={tool.is_favorited ? 'В улюблених' : 'Додати в улюблені'}
+                        className="flex-1 py-1.5 text-center text-[0.8125rem] font-medium rounded-lg border transition disabled:opacity-60 disabled:cursor-not-allowed inline-flex items-center justify-center gap-1 bg-red-500/10 border-red-500/30 text-red-600 dark:text-red-400 hover:bg-red-500/20 dark:hover:bg-red-500/20"
+                      >
+                        <svg width="14" height="14" viewBox="0 0 16 16" fill={tool.is_favorited ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="1.2" strokeLinejoin="round">
+                          <path d="M8 12.5l-.6-.5C3.5 8.5 2 6.5 2 4.5 2 3 3.5 2 5 2c1.2 0 2.3.6 3 1.5.7-.9 1.8-1.5 3-1.5 1.5 0 3 1 3 2.5 0 2-1.5 4-5.4 7.5l-.6.5z" />
+                        </svg>
+                        {(tool.is_favorited || favoriteAddingId === tool.id) && (tool.is_favorited ? 'В улюблених' : '...')}
+                      </button>
+                    ) : (
+                      <Link to="/login" state={{ addFavoriteToolId: tool.id }} title="Додати в улюблені" className="flex-1 py-1.5 text-center text-[0.8125rem] font-medium rounded-lg border border-red-500/30 bg-red-500/10 text-red-600 dark:text-red-400 no-underline hover:bg-red-500/20 dark:hover:bg-red-500/20 transition inline-flex items-center justify-center">
+                        <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.2" strokeLinejoin="round">
+                          <path d="M8 12.5l-.6-.5C3.5 8.5 2 6.5 2 4.5 2 3 3.5 2 5 2c1.2 0 2.3.6 3 1.5.7-.9 1.8-1.5 3-1.5 1.5 0 3 1 3 2.5 0 2-1.5 4-5.4 7.5l-.6.5z" />
+                        </svg>
+                      </Link>
+                    )}
+                    {user ? (
+                      <Link to={`/tools/${tool.id}`} className="flex-1 py-1.5 text-center text-[0.8125rem] font-medium bg-blue-600/20 text-blue-600 dark:text-blue-400 rounded-lg no-underline hover:bg-blue-600/30 transition">
+                        Деталі
+                      </Link>
+                    ) : (
+                      <Link to="/login" state={{ from: `/tools/${tool.id}` }} className="flex-1 py-1.5 text-center text-[0.8125rem] font-medium bg-blue-600/20 text-blue-600 dark:text-blue-400 rounded-lg no-underline hover:bg-blue-600/30 transition">
+                        Деталі
+                      </Link>
+                    )}
                   </div>
                 </div>
               )

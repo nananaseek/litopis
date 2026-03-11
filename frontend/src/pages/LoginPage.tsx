@@ -1,10 +1,13 @@
 import { useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
+import { addFavorite } from '../api/tools'
 
 export default function LoginPage() {
   const { login } = useAuth()
   const navigate = useNavigate()
+  const location = useLocation()
+  const state = (location.state as { from?: string; addFavoriteToolId?: string } | undefined) ?? {}
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
@@ -16,7 +19,14 @@ export default function LoginPage() {
     setSubmitting(true)
     try {
       await login(username, password)
-      navigate('/arsenal')
+      if (state.addFavoriteToolId) {
+        try {
+          await addFavorite(state.addFavoriteToolId)
+        } catch {
+          // ігноруємо помилку додавання в улюблені
+        }
+      }
+      navigate(state.from ?? '/arsenal', { replace: true })
     } catch (err: unknown) {
       const msg =
         (err as { response?: { data?: { detail?: string } } })?.response?.data?.detail ??
@@ -61,7 +71,7 @@ export default function LoginPage() {
           {submitting ? 'Вхід...' : 'Увійти'}
         </button>
         <p className="text-sm text-center text-slate-500 mt-4 dark:text-slate-400">
-          Немає акаунту? <Link to="/register" className="text-blue-600 font-medium no-underline hover:underline dark:text-blue-400">Зареєструватися</Link>
+          Немає акаунту? <Link to="/register" state={state} className="text-blue-600 font-medium no-underline hover:underline dark:text-blue-400">Зареєструватися</Link>
         </p>
       </form>
     </div>
