@@ -144,12 +144,6 @@ export default function ArsenalPage() {
     setFavoriteTools((prev) => (isFavorited ? prev : prev.filter((t) => t.id !== toolId)))
   }, [])
 
-  const handleRatingChange = useCallback((toolId: string, updated: ToolResponse) => {
-    setMyTools((prev) => prev.map((t) => (t.id === toolId ? { ...t, average_rating: updated.average_rating, rating_count: updated.rating_count, user_rating: updated.user_rating } : t)))
-    setLibraryTools((prev) => prev.map((t) => (t.id === toolId ? { ...t, average_rating: updated.average_rating, rating_count: updated.rating_count, user_rating: updated.user_rating } : t)))
-    setFavoriteTools((prev) => prev.map((t) => (t.id === toolId ? { ...t, average_rating: updated.average_rating, rating_count: updated.rating_count, user_rating: updated.user_rating } : t)))
-  }, [])
-
   const tabBase = 'inline-flex items-center gap-1.5 px-4 py-2 text-sm font-medium rounded-lg border transition-colors cursor-pointer'
   const tabActive = 'bg-blue-600 border-blue-600 text-white hover:bg-blue-700'
   const tabInactive = 'border-slate-300 dark:border-white/10 text-slate-600 dark:text-gray-400 hover:bg-slate-100 dark:hover:bg-white/5 hover:text-slate-900 dark:hover:text-gray-300 hover:border-slate-400 dark:hover:border-white/20'
@@ -278,7 +272,7 @@ export default function ArsenalPage() {
         <>
           <div className="grid grid-cols-[repeat(auto-fill,minmax(320px,1fr))] gap-5">
             {paginatedTools.map((tool) => (
-              <ToolCard key={tool.id} tool={tool} isOwner={activeTab === 'my'} onPublish={() => handlePublish(tool.id)} onUnpublish={() => handleUnpublish(tool.id)} onDeleteRequest={(id, name) => setPendingDelete({ id, name })} onFavoriteChange={handleFavoriteChange} onRatingChange={handleRatingChange} />
+              <ToolCard key={tool.id} tool={tool} isOwner={activeTab === 'my'} onPublish={() => handlePublish(tool.id)} onUnpublish={() => handleUnpublish(tool.id)} onDeleteRequest={(id, name) => setPendingDelete({ id, name })} onFavoriteChange={handleFavoriteChange} />
             ))}
           </div>
           {totalPages > 1 && (

@@ -3,7 +3,6 @@ import { Link, useNavigate } from 'react-router-dom'
 import type { ToolResponse } from '../../api/tools'
 import * as toolsApi from '../../api/tools'
 import StarRating from '../StarRating/StarRating'
-import { useAuth } from '../../contexts/AuthContext'
 
 interface ToolCardProps {
   tool: ToolResponse
@@ -12,7 +11,6 @@ interface ToolCardProps {
   onUnpublish?: () => void
   onDeleteRequest?: (id: string, name: string) => void
   onFavoriteChange?: (toolId: string, isFavorited: boolean) => void
-  onRatingChange?: (toolId: string, updated: ToolResponse) => void
 }
 
 const catColors: Record<string, string> = {
@@ -23,30 +21,15 @@ const catColors: Record<string, string> = {
   'моніторинг': 'bg-amber-500/20 text-amber-400 border-amber-500/30',
 }
 
-export default function ToolCard({ tool, isOwner, onPublish, onUnpublish, onDeleteRequest, onFavoriteChange, onRatingChange }: ToolCardProps) {
+export default function ToolCard({ tool, isOwner, onPublish, onUnpublish, onDeleteRequest, onFavoriteChange }: ToolCardProps) {
   const navigate = useNavigate()
-  const { user } = useAuth()
   const [favorited, setFavorited] = useState(!!tool.is_favorited)
   const [favoriteLoading, setFavoriteLoading] = useState(false)
-  const [ratingSubmitting, setRatingSubmitting] = useState(false)
-  const [displayRating, setDisplayRating] = useState<ToolResponse['user_rating']>(tool.user_rating ?? null)
   useEffect(() => { setFavorited(!!tool.is_favorited) }, [tool.is_favorited])
-  useEffect(() => { setDisplayRating(tool.user_rating ?? null) }, [tool.user_rating])
   const catCls = catColors[tool.category.toLowerCase()] ?? 'bg-blue-500/20 text-blue-400 border-blue-500/30'
   const btnBase = 'inline-flex items-center gap-1 px-3 py-1.5 text-sm font-medium rounded-lg transition-opacity hover:opacity-90'
-  const canRate = !!user && tool.is_published
 
   const goToTool = () => navigate(`/tools/${tool.id}`)
-
-  const handleSetRating = async (value: number) => {
-    if (ratingSubmitting) return
-    setRatingSubmitting(true)
-    try {
-      const updated = await toolsApi.setToolRating(tool.id, value)
-      setDisplayRating(updated.user_rating ?? value)
-      onRatingChange?.(tool.id, updated)
-    } catch { /* interceptor */ } finally { setRatingSubmitting(false) }
-  }
 
   const handleFavoriteClick = async (e: React.MouseEvent) => {
     e.stopPropagation()
@@ -94,21 +77,7 @@ export default function ToolCard({ tool, isOwner, onPublish, onUnpublish, onDele
         </div>
       )}
       <p className="text-sm text-slate-500 dark:text-gray-500 m-0 leading-relaxed">{tool.description}</p>
-      <div className="flex flex-wrap items-center gap-2" onClick={(e) => e.stopPropagation()}>
-        <StarRating value={tool.average_rating ?? null} count={tool.rating_count ?? 0} size="sm" />
-        {canRate && (
-          <span className="inline-flex items-center gap-1 text-xs text-slate-500 dark:text-gray-500">
-            Мій рейтинг:
-            <StarRating
-              value={displayRating ?? null}
-              size="sm"
-              interactive
-              onChange={handleSetRating}
-            />
-            {ratingSubmitting && <span className="text-slate-400">...</span>}
-          </span>
-        )}
-      </div>
+      <StarRating value={tool.average_rating ?? null} count={tool.rating_count ?? 0} size="sm" />
       <div className="flex flex-wrap gap-2 text-[0.8125rem] text-slate-500 dark:text-gray-500">
         {tool.license && <span>Ліцензія: {tool.license}</span>}
         {tool.is_published && <span className="text-green-400 font-medium">Опубліковано</span>}
