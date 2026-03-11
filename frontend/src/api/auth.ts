@@ -1,16 +1,17 @@
 import client from './client'
+import * as tokenStorage from './tokenStorage'
+
+export const ACCESS_TOKEN_KEY = tokenStorage.ACCESS_TOKEN_KEY
+export const REFRESH_TOKEN_KEY = tokenStorage.REFRESH_TOKEN_KEY
+export const saveTokens = tokenStorage.saveTokens
+export const clearTokens = tokenStorage.clearTokens
+export type TokenPair = tokenStorage.TokenPair
 
 export interface UserResponse {
   id: string
   username: string
   email: string
   is_active: boolean
-}
-
-export interface TokenPair {
-  access_token: string
-  refresh_token: string
-  token_type: string
 }
 
 export async function register(username: string, email: string, password: string): Promise<UserResponse> {

@@ -2,6 +2,8 @@ import { createContext, useContext, useState, useEffect, useCallback } from 'rea
 import type { ReactNode } from 'react'
 
 const STORAGE_KEY = 'theme'
+/** Тема за замовчуванням; вибір користувача зберігається в localStorage */
+const DEFAULT_THEME: Theme = 'dark'
 
 export type Theme = 'light' | 'dark'
 
@@ -14,10 +16,10 @@ interface ThemeContextValue {
 const ThemeContext = createContext<ThemeContextValue | null>(null)
 
 function getInitialTheme(): Theme {
-  if (typeof window === 'undefined') return 'dark'
+  if (typeof window === 'undefined') return DEFAULT_THEME
   const stored = localStorage.getItem(STORAGE_KEY) as Theme | null
   if (stored === 'light' || stored === 'dark') return stored
-  return 'dark'
+  return DEFAULT_THEME
 }
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
@@ -30,6 +32,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     } else {
       root.classList.remove('dark')
     }
+    // Зберігаємо вибір користувача для наступного візиту
     localStorage.setItem(STORAGE_KEY, theme)
   }, [theme])
 

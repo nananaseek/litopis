@@ -23,7 +23,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    const token = localStorage.getItem('access_token')
+    const token = localStorage.getItem(authApi.ACCESS_TOKEN_KEY)
     if (!token) {
       setLoading(false)
       return
@@ -31,17 +31,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     authApi
       .getMe()
       .then((u) => setUser({ id: u.id, username: u.username, email: u.email }))
-      .catch(() => {
-        localStorage.removeItem('access_token')
-        localStorage.removeItem('refresh_token')
-      })
+      .catch(() => authApi.clearTokens())
       .finally(() => setLoading(false))
   }, [])
 
   const login = useCallback(async (username: string, password: string) => {
     const tokens = await authApi.login(username, password)
-    localStorage.setItem('access_token', tokens.access_token)
-    localStorage.setItem('refresh_token', tokens.refresh_token)
+    authApi.saveTokens(tokens)
     const me = await authApi.getMe()
     setUser({ id: me.id, username: me.username, email: me.email })
   }, [])
@@ -52,8 +48,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [login])
 
   const logout = useCallback(() => {
-    localStorage.removeItem('access_token')
-    localStorage.removeItem('refresh_token')
+    authApi.clearTokens()
     setUser(null)
   }, [])
 
