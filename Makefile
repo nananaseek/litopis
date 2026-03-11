@@ -2,7 +2,7 @@ COMPOSE_DEV  = -f docker-compose.dev.yml
 COMPOSE_PROD = -f docker-compose.prod.yml
 
 .PHONY: dev build up down logs restart clean backend-shell frontend-shell mongo-shell lint prod prod-backend prod-frontend help
-.PHONY: prod-docker-up prod-docker-down prod-docker-logs prod-docker-build
+.PHONY: prod-docker-up prod-docker-down prod-docker-logs prod-docker-build prod-reload
 
 help: ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-22s\033[0m %s\n", $$1, $$2}'
@@ -43,6 +43,9 @@ prod-docker-logs: ## Tail production logs
 
 prod-docker-build: ## Build production images
 	docker compose $(COMPOSE_PROD) build
+
+prod-reload: ## Rebuild and restart backend + frontend (prod stack)
+	docker compose $(COMPOSE_PROD) up -d --build --force-recreate backend frontend
 
 # ── Shells (dev stack) ─────────────────────────────────────────
 
