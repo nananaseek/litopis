@@ -68,9 +68,9 @@ export default function ToolCard({ tool, isOwner, onPublish, onUnpublish, onDele
           </span>
         </div>
       </div>
-      {tool.tags.length > 0 && (
+      {Array.isArray(tool.tags) && tool.tags.length > 0 && (
         <div className="flex flex-wrap gap-1">
-          {tool.tags.map((tag) => (
+          {(tool.tags || []).map((tag) => (
             <span key={tag} className="text-[0.6875rem] font-medium px-1.5 py-0.5 rounded bg-slate-100 dark:bg-white/5 text-slate-500 dark:text-gray-500 border border-slate-200 dark:border-white/5">{tag}</span>
           ))}
         </div>

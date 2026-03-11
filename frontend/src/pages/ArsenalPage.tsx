@@ -26,7 +26,10 @@ export default function ArsenalPage() {
 
   const loadMyTools = useCallback(async () => {
     setLoading(true)
-    try { setMyTools(await toolsApi.getMyTools()) } catch { /* interceptor */ } finally { setLoading(false) }
+    try {
+      const data = await toolsApi.getMyTools()
+      setMyTools(Array.isArray(data) ? data : [])
+    } catch { setMyTools([]) } finally { setLoading(false) }
   }, [])
 
   const loadLibrary = useCallback(async () => {
@@ -36,15 +39,21 @@ export default function ArsenalPage() {
       if (categoryFilter !== 'Всі') params.category = categoryFilter
       if (search) params.search = search
       if (minRating != null) params.min_rating = minRating
-      setLibraryTools(await toolsApi.getLibrary(params))
+      const data = await toolsApi.getLibrary(params)
+      setLibraryTools(Array.isArray(data) ? data : [])
       const stats = await toolsApi.getLibraryStats()
       setLibraryStats(stats)
-    } catch { /* interceptor */ } finally { setLoading(false) }
+    } catch {
+      setLibraryTools([])
+    } finally { setLoading(false) }
   }, [categoryFilter, search, minRating])
 
   const loadFavorites = useCallback(async () => {
     setLoading(true)
-    try { setFavoriteTools(await toolsApi.getFavorites()) } catch { /* interceptor */ } finally { setLoading(false) }
+    try {
+      const data = await toolsApi.getFavorites()
+      setFavoriteTools(Array.isArray(data) ? data : [])
+    } catch { setFavoriteTools([]) } finally { setLoading(false) }
   }, [])
 
   useToolsWS(useCallback(() => { loadLibrary() }, [loadLibrary]), activeTab === 'library')
@@ -56,16 +65,17 @@ export default function ArsenalPage() {
   }, [activeTab, loadMyTools, loadLibrary, loadFavorites])
 
   const tools = activeTab === 'my' ? myTools : activeTab === 'library' ? libraryTools : favoriteTools
+  const toolsList = Array.isArray(tools) ? tools : []
 
   const filteredTools = useMemo(() => {
-    let list = tools.filter((t) => {
+    let list = toolsList.filter((t) => {
       const matchSearch = !search || t.name.toLowerCase().includes(search.toLowerCase()) || t.description.toLowerCase().includes(search.toLowerCase())
       const matchCategory = categoryFilter === 'Всі' || t.category === categoryFilter
       return activeTab === 'library' || activeTab === 'favorites' ? matchSearch && matchCategory : matchSearch && matchCategory
     })
     if (sortBy === 'name') list = [...list].sort((a, b) => a.name.localeCompare(b.name))
     return list
-  }, [tools, search, categoryFilter, sortBy, activeTab])
+  }, [toolsList, search, categoryFilter, sortBy, activeTab])
 
   const totalPages = Math.max(1, Math.ceil(filteredTools.length / pageSize))
   const paginatedTools = useMemo(() => filteredTools.slice((currentPage - 1) * pageSize, currentPage * pageSize), [filteredTools, currentPage, pageSize])

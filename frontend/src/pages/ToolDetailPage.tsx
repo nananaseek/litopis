@@ -17,7 +17,7 @@ interface EditDraft {
 }
 
 function toolToDraft(tool: ToolDetailResponse): EditDraft {
-  return { name: tool.name, description: tool.description, category: tool.category as ToolCategory, license: tool.license ?? '', icon: tool.icon, tags: [...tool.tags], githubUrl: tool.github_url ?? '', officialUrl: tool.official_url ?? '', downloadUrl: tool.download_url ?? '' }
+  return { name: tool.name, description: tool.description, category: tool.category as ToolCategory, license: tool.license ?? '', icon: tool.icon, tags: Array.isArray(tool.tags) ? [...tool.tags] : [], githubUrl: tool.github_url ?? '', officialUrl: tool.official_url ?? '', downloadUrl: tool.download_url ?? '' }
 }
 
 const catChipColors: Record<string, string> = {
@@ -269,8 +269,8 @@ export default function ToolDetailPage() {
               </div>
             ) : (
               <div className="flex flex-wrap gap-1">
-                {tool.tags.length > 0
-                  ? tool.tags.map((tag) => <span key={tag} className="inline-block text-[0.8125rem] font-medium px-2.5 py-0.5 rounded-md bg-slate-100 dark:bg-white/5 text-slate-600 dark:text-gray-400 border border-slate-200 dark:border-white/5">{tag}</span>)
+                {(Array.isArray(tool.tags) ? tool.tags : []).length > 0
+                  ? (Array.isArray(tool.tags) ? tool.tags : []).map((tag) => <span key={tag} className="inline-block text-[0.8125rem] font-medium px-2.5 py-0.5 rounded-md bg-slate-100 dark:bg-white/5 text-slate-600 dark:text-gray-400 border border-slate-200 dark:border-white/5">{tag}</span>)
                   : <span className="text-[0.8125rem] text-slate-500 dark:text-gray-500 italic">Немає тегів</span>
                 }
               </div>

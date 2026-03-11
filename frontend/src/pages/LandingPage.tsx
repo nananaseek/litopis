@@ -24,8 +24,8 @@ export default function LandingPage() {
 
   useEffect(() => {
     getLibrary({ limit: 6 })
-      .then(setTools)
-      .catch(() => {})
+      .then((data) => setTools(Array.isArray(data) ? data : []))
+      .catch(() => setTools([]))
       .finally(() => setLoading(false))
   }, [])
 
@@ -35,7 +35,8 @@ export default function LandingPage() {
       .catch(() => {})
   }, [])
 
-  const totalTools = tools.length
+  const toolsList = Array.isArray(tools) ? tools : []
+  const totalTools = toolsList.length
 
   return (
     <div className="min-h-screen bg-slate-100 text-slate-900 dark:bg-[#0b0b12] dark:text-gray-100">
@@ -173,7 +174,7 @@ export default function LandingPage() {
               </div>
             ))}
           </div>
-        ) : tools.length === 0 ? (
+        ) : toolsList.length === 0 ? (
           <div className="text-center py-16 bg-white dark:bg-[#12121a] border border-dashed border-slate-200 dark:border-white/10 rounded-xl">
             <span className="text-4xl block mb-3">🔍</span>
             <h3 className="text-lg font-semibold text-slate-700 dark:text-gray-300 mb-2">Поки що немає інструментів</h3>
@@ -181,8 +182,9 @@ export default function LandingPage() {
           </div>
         ) : (
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-5">
-            {tools.map((tool) => {
-              const tagCls = catColors[tool.category.toLowerCase()] ?? 'bg-blue-500/20 text-blue-400 border-blue-500/30'
+            {toolsList.map((tool) => {
+              const tagCls = catColors[tool.category?.toLowerCase() ?? ''] ?? 'bg-blue-500/20 text-blue-400 border-blue-500/30'
+              const tags = Array.isArray(tool.tags) ? tool.tags : []
               return (
                 <div key={tool.id} className="bg-white dark:bg-[#12121a] border border-slate-200 dark:border-white/5 rounded-xl p-5 flex flex-col gap-3 hover:border-slate-300 dark:hover:border-white/10 transition group">
                   <div className="flex items-start gap-3">
@@ -191,7 +193,7 @@ export default function LandingPage() {
                       <h3 className="text-base font-semibold text-slate-900 dark:text-gray-100 leading-tight mb-1">{tool.name}</h3>
                       <div className="flex flex-wrap gap-1">
                         <span className={`text-[0.6875rem] font-medium px-1.5 py-0.5 rounded border ${tagCls}`}>{tool.category}</span>
-                        {tool.tags.slice(0, 2).map((tag) => (
+                        {tags.slice(0, 2).map((tag) => (
                           <span key={tag} className="text-[0.6875rem] px-1.5 py-0.5 rounded bg-slate-100 dark:bg-white/5 text-slate-500 dark:text-gray-500 border border-slate-200 dark:border-white/5">{tag}</span>
                         ))}
                       </div>
