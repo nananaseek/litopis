@@ -8,6 +8,14 @@ import type { ToolFormData } from '../types/arsenal'
 import { CATEGORIES } from '../data/mockTools'
 import * as toolsApi from '../api/tools'
 import type { ToolResponse } from '../api/tools'
+import {
+  cachedFetch,
+  CACHE_TTL_MS,
+  myToolsCacheKey,
+  libraryCacheKey,
+  libraryStatsCacheKey,
+  favoritesCacheKey,
+} from '../api/cache'
 import { useToolsWS } from '../hooks/useToolsWS'
 
 type TabId = 'my' | 'library' | 'favorites'
@@ -15,9 +23,11 @@ type TabId = 'my' | 'library' | 'favorites'
 export default function ArsenalPage() {
   const [searchParams] = useSearchParams()
   const categoryFromUrl = searchParams.get('category')
-  const [activeTab, setActiveTab] = useState<TabId>(categoryFromUrl && CATEGORIES.includes(categoryFromUrl) ? 'library' : 'my')
+  const [activeTab, setActiveTab] = useState<TabId>(categoryFromUrl && CATEGORIES.includes(categoryFromUrl as (typeof CATEGORIES)[number]) ? 'library' : 'my')
   const [search, setSearch] = useState('')
-  const [categoryFilter, setCategoryFilter] = useState(CATEGORIES.includes(categoryFromUrl ?? '') ? categoryFromUrl! : 'Всі')
+  const [categoryFilter, setCategoryFilter] = useState<(typeof CATEGORIES)[number]>(
+    CATEGORIES.includes((categoryFromUrl ?? '') as (typeof CATEGORIES)[number]) ? (categoryFromUrl as (typeof CATEGORIES)[number]) : 'Всі'
+  )
   const [minRating, setMinRating] = useState<number | null>(null)
   const [sortBy, setSortBy] = useState('popularity')
   const [modalOpen, setModalOpen] = useState(false)
@@ -35,15 +45,24 @@ export default function ArsenalPage() {
 
   const loadMyTools = useCallback(async () => {
     setLoading(true)
+    const skip = (currentPage - 1) * pageSize
+    const category = categoryFilter !== 'Всі' ? categoryFilter : undefined
+    const key = myToolsCacheKey(skip, pageSize, { category, search: search || undefined, sort: sortBy })
     try {
-      const category = categoryFilter !== 'Всі' ? categoryFilter : undefined
-      const data = await toolsApi.getMyTools(
-        (currentPage - 1) * pageSize,
-        pageSize,
-        { category, search: search || undefined, sort: sortBy }
+      const fresh = await cachedFetch(
+        key,
+        CACHE_TTL_MS,
+        () => toolsApi.getMyTools(skip, pageSize, { category, search: search || undefined, sort: sortBy }),
+        {
+          onCached: (data) => {
+            setMyTools(data.items)
+            setMyToolsTotal(data.total)
+            setLoading(false)
+          },
+        }
       )
-      setMyTools(data.items)
-      setMyToolsTotal(data.total)
+      setMyTools(fresh.items)
+      setMyToolsTotal(fresh.total)
     } catch {
       setMyTools([])
       setMyToolsTotal(0)
@@ -54,20 +73,30 @@ export default function ArsenalPage() {
 
   const loadLibrary = useCallback(async () => {
     setLoading(true)
+    const skip = (currentPage - 1) * pageSize
+    const category = categoryFilter !== 'Всі' ? categoryFilter : undefined
+    const libraryParams = { skip, limit: pageSize, category, search: search || undefined, min_rating: minRating ?? undefined, sort: sortBy }
+    const libraryKey = libraryCacheKey(libraryParams)
+    const statsKey = libraryStatsCacheKey()
     try {
-      const category = categoryFilter !== 'Всі' ? categoryFilter : undefined
-      const data = await toolsApi.getLibrary({
-        skip: (currentPage - 1) * pageSize,
-        limit: pageSize,
-        category,
-        search: search || undefined,
-        min_rating: minRating ?? undefined,
-        sort: sortBy,
-      })
-      setLibraryTools(data.items)
-      setLibraryToolsTotal(data.total)
-      const stats = await toolsApi.getLibraryStats()
-      setLibraryStats(stats)
+      const [libraryFresh, statsFresh] = await Promise.all([
+        cachedFetch(
+          libraryKey,
+          CACHE_TTL_MS,
+          () => toolsApi.getLibrary(libraryParams),
+          {
+            onCached: (data) => {
+              setLibraryTools(data.items)
+              setLibraryToolsTotal(data.total)
+              setLoading(false)
+            },
+          }
+        ),
+        cachedFetch(statsKey, CACHE_TTL_MS, () => toolsApi.getLibraryStats(), { onCached: setLibraryStats }),
+      ])
+      setLibraryTools(libraryFresh.items)
+      setLibraryToolsTotal(libraryFresh.total)
+      setLibraryStats(statsFresh)
     } catch {
       setLibraryTools([])
       setLibraryToolsTotal(0)
@@ -78,10 +107,22 @@ export default function ArsenalPage() {
 
   const loadFavorites = useCallback(async () => {
     setLoading(true)
+    const skip = 0
+    const limit = 50
+    const key = favoritesCacheKey(skip, limit)
     try {
-      const data = await toolsApi.getFavorites()
-      setFavoriteTools(Array.isArray(data) ? data : [])
-    } catch { setFavoriteTools([]) } finally { setLoading(false) }
+      const fresh = await cachedFetch(key, CACHE_TTL_MS, () => toolsApi.getFavorites(skip, limit), {
+        onCached: (data) => {
+          setFavoriteTools(Array.isArray(data) ? data : [])
+          setLoading(false)
+        },
+      })
+      setFavoriteTools(Array.isArray(fresh) ? fresh : [])
+    } catch {
+      setFavoriteTools([])
+    } finally {
+      setLoading(false)
+    }
   }, [])
 
   useToolsWS(useCallback(() => { loadLibrary() }, [loadLibrary]), activeTab === 'library')

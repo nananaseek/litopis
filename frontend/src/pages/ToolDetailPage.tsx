@@ -3,6 +3,7 @@ import { useParams, Link } from 'react-router-dom'
 import DOMPurify from 'dompurify'
 import { getToolDetail, updateTool, refreshReadme, setToolRating, addFavorite, removeFavorite } from '../api/tools'
 import type { ToolDetailResponse } from '../api/tools'
+import { cachedFetch, CACHE_TTL_MS, toolDetailCacheKey } from '../api/cache'
 import type { ToolCategory } from '../types/arsenal'
 import { useAuth } from '../contexts/AuthContext'
 import { useTheme } from '../contexts/ThemeContext'
@@ -50,8 +51,21 @@ export default function ToolDetailPage() {
   const [favoriteLoading, setFavoriteLoading] = useState(false)
 
   const loadTool = useCallback(() => {
-    if (!id) return; setLoading(true)
-    getToolDetail(id).then(setTool).catch(() => setError('Інструмент не знайдено')).finally(() => setLoading(false))
+    if (!id) return
+    setLoading(true)
+    setError('')
+    const key = toolDetailCacheKey(id)
+    cachedFetch(key, CACHE_TTL_MS, () => getToolDetail(id), {
+      onCached: (data) => {
+        setTool(data)
+        setLoading(false)
+      },
+    })
+      .then((fresh) => {
+        setTool(fresh)
+      })
+      .catch(() => setError('Інструмент не знайдено'))
+      .finally(() => setLoading(false))
   }, [id])
 
   useEffect(() => { loadTool() }, [loadTool])

@@ -22,7 +22,7 @@ export default function CountUp({
   className = '',
 }: CountUpProps) {
   const [displayValue, setDisplayValue] = useState(0)
-  const rafRef = useRef<number>()
+  const rafRef = useRef<number | undefined>(undefined)
   const startRef = useRef<{ start: number; target: number } | null>(null)
 
   useEffect(() => {
