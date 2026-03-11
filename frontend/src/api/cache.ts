@@ -131,6 +131,9 @@ function dataEqual(a: unknown, b: unknown): boolean {
   return JSON.stringify(a) === JSON.stringify(b)
 }
 
+/** In-flight запити за ключем (дедуплікація при Strict Mode / подвійному mount) */
+const inFlight = new Map<string, Promise<unknown>>()
+
 export interface CachedFetchOptions<T> {
   onCached?: (data: T) => void
 }
@@ -138,6 +141,7 @@ export interface CachedFetchOptions<T> {
 /**
  * Load from cache first (if valid), call onCached, then fetch from API.
  * If fresh data differs from cached, updates cache. Resolves with fresh data.
+ * Один і той самий ключ не викликає fetcher двічі — повторні виклики чекають на вже виконаний запит.
  */
 export async function cachedFetch<T>(
   key: string,
@@ -145,16 +149,27 @@ export async function cachedFetch<T>(
   fetcher: () => Promise<T>,
   options?: CachedFetchOptions<T>
 ): Promise<T> {
-  const cached = await get<T>(key)
-  if (cached) {
-    options?.onCached?.(cached.data)
+  const existing = inFlight.get(key)
+  if (existing) {
+    const cached = await get<T>(key)
+    if (cached) options?.onCached?.(cached.data)
+    return existing as Promise<T>
   }
 
-  const fresh = await fetcher()
+  const promise = (async (): Promise<T> => {
+    const cached = await get<T>(key)
+    if (cached) options?.onCached?.(cached.data)
+    const fresh = await fetcher()
+    if (!cached || !dataEqual(cached.data, fresh)) {
+      await set(key, fresh, ttlMs)
+    }
+    return fresh
+  })()
 
-  if (!cached || !dataEqual(cached.data, fresh)) {
-    await set(key, fresh, ttlMs)
+  inFlight.set(key, promise)
+  try {
+    return await promise
+  } finally {
+    inFlight.delete(key)
   }
-
-  return fresh
 }
