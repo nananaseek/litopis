@@ -11,7 +11,7 @@ from app.api.deps import get_current_user, get_current_user_optional
 from app.core.events import broadcast
 from app.models.favorite import ToolFavorite
 from app.models.rating import ToolRating
-from app.models.tool import Tool
+from app.models.tool import Tool, ToolCategory
 from app.models.user import User
 from app.schemas.tool import ToolCreate, ToolDetailResponse, ToolResponse, ToolRatingSet, ToolUpdate, MyToolsResponse, LibraryResponse
 
@@ -156,14 +156,20 @@ async def create_tool(data: ToolCreate, user: User = Depends(get_current_user)):
 
 @router.get("/library/stats")
 async def get_library_stats():
-    """Кількість опублікованих інструментів: всього та нових (доданих за останні 5 днів)."""
+    """Кількість опублікованих інструментів: всього, нових та по категоріях."""
     total = await Tool.find(Tool.is_published == True).count()  # noqa: E712
     cutoff = datetime.now(UTC) - timedelta(days=5)
     new = await Tool.find(
         Tool.is_published == True,  # noqa: E712
         Tool.created_at >= cutoff,
     ).count()
-    return {"total": total, "new": new}
+    category_counts: dict[str, int] = {}
+    for cat in ToolCategory:
+        category_counts[cat.value] = await Tool.find(
+            Tool.is_published == True,  # noqa: E712
+            Tool.category == cat,
+        ).count()
+    return {"total": total, "new": new, "category_counts": category_counts}
 
 
 @router.get("/library", response_model=LibraryResponse)

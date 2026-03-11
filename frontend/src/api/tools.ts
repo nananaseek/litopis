@@ -122,6 +122,7 @@ export async function getLibrary(params?: {
 export interface LibraryStats {
   total: number
   new: number
+  category_counts?: Record<string, number>
 }
 
 export async function getLibraryStats(): Promise<LibraryStats> {

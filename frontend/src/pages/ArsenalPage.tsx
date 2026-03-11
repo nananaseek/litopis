@@ -1,4 +1,5 @@
 import { useState, useMemo, useEffect, useCallback } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import AddToolModal from '../components/AddToolModal/AddToolModal'
 import ConfirmDialog from '../components/ConfirmDialog/ConfirmDialog'
 import ImportToolsModal from '../components/ImportToolsModal/ImportToolsModal'
@@ -12,9 +13,11 @@ import { useToolsWS } from '../hooks/useToolsWS'
 type TabId = 'my' | 'library' | 'favorites'
 
 export default function ArsenalPage() {
-  const [activeTab, setActiveTab] = useState<TabId>('my')
+  const [searchParams] = useSearchParams()
+  const categoryFromUrl = searchParams.get('category')
+  const [activeTab, setActiveTab] = useState<TabId>(categoryFromUrl && CATEGORIES.includes(categoryFromUrl) ? 'library' : 'my')
   const [search, setSearch] = useState('')
-  const [categoryFilter, setCategoryFilter] = useState('Всі')
+  const [categoryFilter, setCategoryFilter] = useState(CATEGORIES.includes(categoryFromUrl ?? '') ? categoryFromUrl! : 'Всі')
   const [minRating, setMinRating] = useState<number | null>(null)
   const [sortBy, setSortBy] = useState('popularity')
   const [modalOpen, setModalOpen] = useState(false)

@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
-import { getLibrary } from '../api/tools'
+import { getLibrary, getLibraryStats } from '../api/tools'
 import type { ToolResponse } from '../api/tools'
 import { getUsersCount, formatUsersCountDisplay } from '../api/auth'
 import { useAuth } from '../contexts/AuthContext'
 import ThemeToggle from '../components/ThemeToggle/ThemeToggle'
+import CountUp from '../components/CountUp/CountUp'
 
 const CATEGORIES = ['OSINT', 'Аналітика', 'Комунікації', 'Безпека', 'Моніторинг'] as const
 
@@ -22,6 +23,7 @@ export default function LandingPage() {
   const [toolsTotal, setToolsTotal] = useState(0)
   const [loading, setLoading] = useState(true)
   const [usersCount, setUsersCount] = useState<number | null>(null)
+  const [categoryCounts, setCategoryCounts] = useState<Record<string, number>>({})
 
   useEffect(() => {
     getLibrary({ limit: 6 })
@@ -31,6 +33,12 @@ export default function LandingPage() {
       })
       .catch(() => { setTools([]); setToolsTotal(0) })
       .finally(() => setLoading(false))
+  }, [])
+
+  useEffect(() => {
+    getLibraryStats()
+      .then((stats) => setCategoryCounts(stats.category_counts ?? {}))
+      .catch(() => {})
   }, [])
 
   useEffect(() => {
@@ -116,16 +124,28 @@ export default function LandingPage() {
       {/* Stats */}
       <section className="max-w-4xl mx-auto px-6 pb-16">
         <div className="grid grid-cols-3 gap-6">
-          {[
-            { value: `${totalTools || '—'}`, label: 'Інструментів', color: 'text-blue-400' },
-            { value: '5', label: 'Категорій', color: 'text-purple-400' },
-            { value: usersCount != null ? formatUsersCountDisplay(usersCount) : '—', label: 'Аналітиків', color: 'text-green-400' },
-          ].map((stat) => (
-            <div key={stat.label} className="text-center">
-              <div className={`text-3xl md:text-4xl font-extrabold ${stat.color}`}>{stat.value}</div>
-              <div className="text-sm text-slate-500 dark:text-gray-500 mt-1">{stat.label}</div>
+          <div className="text-center">
+            <div className="text-3xl md:text-4xl font-extrabold text-blue-400">
+              <CountUp value={loading ? null : totalTools} duration={500} />
             </div>
-          ))}
+            <div className="text-sm text-slate-500 dark:text-gray-500 mt-1">Інструментів</div>
+          </div>
+          <div className="text-center">
+            <div className="text-3xl md:text-4xl font-extrabold text-purple-400">
+              <CountUp value={5} duration={500} />
+            </div>
+            <div className="text-sm text-slate-500 dark:text-gray-500 mt-1">Категорій</div>
+          </div>
+          <div className="text-center">
+            <div className="text-3xl md:text-4xl font-extrabold text-green-400">
+              <CountUp
+                value={usersCount}
+                duration={500}
+                format={(n) => formatUsersCountDisplay(Math.round(n))}
+              />
+            </div>
+            <div className="text-sm text-slate-500 dark:text-gray-500 mt-1">Аналітиків</div>
+          </div>
         </div>
       </section>
 
@@ -229,21 +249,25 @@ export default function LandingPage() {
           <p className="text-[0.6875rem] font-semibold uppercase tracking-widest text-slate-500 dark:text-gray-500 mb-1">Організований каталог</p>
           <h2 className="text-2xl font-bold text-slate-900 dark:text-gray-100">Категорії інструментів</h2>
         </div>
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
           {CATEGORIES.map((cat) => {
-            const count = tools.filter((t) => t.category === cat).length
+            const count = categoryCounts[cat] ?? 0
             const colorMap: Record<string, string> = {
-              OSINT: 'border-blue-500/30 hover:bg-blue-500/10',
-              'Аналітика': 'border-indigo-500/30 hover:bg-indigo-500/10',
-              'Комунікації': 'border-green-500/30 hover:bg-green-500/10',
-              'Безпека': 'border-red-500/30 hover:bg-red-500/10',
-              'Моніторинг': 'border-amber-500/30 hover:bg-amber-500/10',
+              OSINT: 'border-blue-500/30 bg-blue-500/5 hover:bg-blue-500/10 dark:bg-blue-500/10 dark:hover:bg-blue-500/15',
+              'Аналітика': 'border-indigo-500/30 bg-indigo-500/5 hover:bg-indigo-500/10 dark:bg-indigo-500/10 dark:hover:bg-indigo-500/15',
+              'Комунікації': 'border-green-500/30 bg-green-500/5 hover:bg-green-500/10 dark:bg-green-500/10 dark:hover:bg-green-500/15',
+              'Безпека': 'border-red-500/30 bg-red-500/5 hover:bg-red-500/10 dark:bg-red-500/10 dark:hover:bg-red-500/15',
+              'Моніторинг': 'border-amber-500/30 bg-amber-500/5 hover:bg-amber-500/10 dark:bg-amber-500/10 dark:hover:bg-amber-500/15',
             }
             return (
-              <div key={cat} className={`bg-white dark:bg-[#12121a] border rounded-xl p-4 text-center transition cursor-default ${colorMap[cat] ?? 'border-slate-200 dark:border-white/5'}`}>
-                <div className="text-lg font-bold text-slate-800 dark:text-gray-200">{cat}</div>
-                <div className="text-xs text-slate-500 dark:text-gray-500 mt-1">{count} інстр.</div>
-              </div>
+              <Link
+                key={cat}
+                to={`/arsenal?category=${encodeURIComponent(cat)}`}
+                className={`block border rounded-xl p-5 text-center transition cursor-pointer ${colorMap[cat] ?? 'border-slate-200 dark:border-white/5 bg-white dark:bg-[#12121a] hover:bg-slate-50 dark:hover:bg-white/5'} no-underline`}
+              >
+                <div className="text-base font-semibold text-slate-800 dark:text-gray-200">{cat}</div>
+                <div className="text-sm text-slate-500 dark:text-gray-500 mt-1">{count} інстр.</div>
+              </Link>
             )
           })}
         </div>
