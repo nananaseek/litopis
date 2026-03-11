@@ -1,0 +1,17 @@
+# Litopis — Cursor rules
+
+## Project
+
+- **Litopis** (Літопис): tool arsenal app — React (Vite) frontend, FastAPI + Beanie (MongoDB) backend. UI language: **Ukrainian**.
+
+## Conventions
+
+- **Backend**: Python 3.12+, FastAPI, Beanie async. Use Pydantic schemas for API; Ruff for lint/format. Auth via JWT (access + refresh); deps: `get_current_user`, `get_current_user_optional`.
+- **Frontend**: React 19, TypeScript, Vite, Tailwind. Pages in `src/pages/`, API in `src/api/`, contexts in `src/contexts/`. Use existing AuthContext and ThemeContext.
+- **API**: Versioned under `/api/v1`. Tools: CRUD, publish/unpublish, library list with filters; ratings 1–5; WebSocket for library change events.
+- **Memory bank**: Core docs live in `memory-bank/`. Read them at task start; update after significant changes or when user says "update memory bank".
+
+## Commands
+
+- `make dev` — full stack in Docker; `make backend-dev` / `make frontend-dev` — local dev.
+- `make lint` — backend (ruff) + frontend (eslint). `make format` — backend format only.

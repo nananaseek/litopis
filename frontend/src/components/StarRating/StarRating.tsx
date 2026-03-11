@@ -46,9 +46,9 @@ export default function StarRating({
               key={star}
               type="button"
               disabled={!interactive}
-              className={`${sc} shrink-0 rounded-sm transition-colors focus:outline-none focus:ring-2 focus:ring-amber-400/50 focus:ring-offset-1 focus:ring-offset-[#0d0d12] disabled:cursor-default ${
+              className={`${sc} shrink-0 rounded-sm transition-colors focus:outline-none focus:ring-2 focus:ring-amber-400/50 focus:ring-offset-1 focus:ring-offset-white dark:focus:ring-offset-[#0d0d12] disabled:cursor-default ${
                 interactive ? 'cursor-pointer hover:opacity-100' : 'cursor-default'
-              } ${filled ? 'text-amber-400' : 'text-white/20'}`}
+              } ${filled ? 'text-amber-400' : 'text-slate-300 dark:text-white/20'}`}
               onMouseEnter={() => interactive && setHover(star)}
               onMouseLeave={() => interactive && setHover(null)}
               onClick={() => handleClick(star)}
@@ -62,7 +62,7 @@ export default function StarRating({
         })}
       </div>
       {(count > 0 || (value != null && value > 0)) && (
-        <span className="ml-1 text-xs text-gray-500">
+        <span className="ml-1 text-xs text-slate-500 dark:text-gray-500">
           {value != null ? value.toFixed(1) : '—'}
           {count > 0 && <span className="ml-0.5">({count})</span>}
         </span>

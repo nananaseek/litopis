@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { getLibrary } from '../api/tools'
 import type { ToolResponse } from '../api/tools'
+import ThemeToggle from '../components/ThemeToggle/ThemeToggle'
 
 const CATEGORIES = ['OSINT', 'Аналітика', 'Комунікації', 'Безпека', 'Моніторинг'] as const
 
@@ -28,23 +29,24 @@ export default function LandingPage() {
   const totalCategories = new Set(tools.map((t) => t.category)).size
 
   return (
-    <div className="min-h-screen bg-[#0b0b12] text-gray-100">
+    <div className="min-h-screen bg-slate-100 text-slate-900 dark:bg-[#0b0b12] dark:text-gray-100">
       {/* Header */}
-      <header className="sticky top-0 z-50 bg-[#0b0b12]/80 backdrop-blur-lg border-b border-white/5">
+      <header className="sticky top-0 z-50 bg-slate-100/80 dark:bg-[#0b0b12]/80 backdrop-blur-lg border-b border-slate-200 dark:border-white/5">
         <div className="max-w-7xl mx-auto flex items-center justify-between px-6 h-14">
-          <Link to="/" className="flex items-center gap-2 text-white font-bold text-lg no-underline">
+          <Link to="/" className="flex items-center gap-2 text-slate-900 dark:text-white font-bold text-lg no-underline">
             <span className="w-7 h-7 rounded-lg bg-blue-600 flex items-center justify-center">
               <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M3 2l5 2 5-2v11l-5 2-5-2V2z" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round"/></svg>
             </span>
             Літопис
           </Link>
           <nav className="hidden md:flex items-center gap-6">
-            <a href="#tools" className="text-sm text-gray-400 hover:text-white transition no-underline">Інструменти</a>
-            <a href="#features" className="text-sm text-gray-400 hover:text-white transition no-underline">Можливості</a>
-            <a href="#categories" className="text-sm text-gray-400 hover:text-white transition no-underline">Категорії</a>
+            <a href="#tools" className="text-sm text-slate-600 dark:text-gray-400 hover:text-slate-900 dark:hover:text-white transition no-underline">Інструменти</a>
+            <a href="#features" className="text-sm text-slate-600 dark:text-gray-400 hover:text-slate-900 dark:hover:text-white transition no-underline">Можливості</a>
+            <a href="#categories" className="text-sm text-slate-600 dark:text-gray-400 hover:text-slate-900 dark:hover:text-white transition no-underline">Категорії</a>
           </nav>
           <div className="flex items-center gap-3">
-            <Link to="/login" className="text-sm text-gray-300 hover:text-white transition no-underline">Увійти</Link>
+            <ThemeToggle />
+            <Link to="/login" className="text-sm text-slate-700 dark:text-gray-300 hover:text-slate-900 dark:hover:text-white transition no-underline">Увійти</Link>
             <Link to="/register" className="px-4 py-1.5 text-sm font-medium bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition no-underline">Реєстрація</Link>
           </div>
         </div>
@@ -64,7 +66,7 @@ export default function LandingPage() {
               OSINT інструментів
             </span>
           </h1>
-          <p className="text-base md:text-lg text-gray-400 max-w-xl mx-auto mb-8 leading-relaxed">
+          <p className="text-base md:text-lg text-slate-600 dark:text-gray-400 max-w-xl mx-auto mb-8 leading-relaxed">
             Збирайте, організовуйте та діліться найкращими інструментами для розвідки з відкритих джерел. Створюйте свій арсенал та публікуйте для спільноти.
           </p>
           <div className="flex flex-wrap items-center justify-center gap-4 mb-10">
@@ -72,15 +74,15 @@ export default function LandingPage() {
               <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M3 2l5 2 5-2v11l-5 2-5-2V2z" stroke="currentColor" strokeWidth="1.3" strokeLinejoin="round"/></svg>
               Почати безкоштовно
             </Link>
-            <a href="#tools" className="inline-flex items-center gap-2 px-5 py-2.5 border border-gray-700 text-gray-300 rounded-lg hover:bg-white/5 hover:border-gray-500 transition no-underline text-sm">
+            <a href="#tools" className="inline-flex items-center gap-2 px-5 py-2.5 border border-slate-300 dark:border-gray-700 text-slate-700 dark:text-gray-300 rounded-lg hover:bg-slate-200 dark:hover:bg-white/5 hover:border-slate-400 dark:hover:border-gray-500 transition no-underline text-sm">
               <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M3 2h10a1 1 0 011 1v10a1 1 0 01-1 1H3a1 1 0 01-1-1V3a1 1 0 011-1z" stroke="currentColor" strokeWidth="1.3"/><path d="M5 5h6M5 8h6M5 11h3" stroke="currentColor" strokeWidth="1.1" strokeLinecap="round"/></svg>
               Переглянути інструменти
             </a>
           </div>
-          <div className="flex items-center justify-center gap-3 text-sm text-gray-500">
+          <div className="flex items-center justify-center gap-3 text-sm text-slate-500 dark:text-gray-500">
             <div className="flex -space-x-2">
               {['#3b82f6', '#8b5cf6', '#ec4899', '#f59e0b', '#10b981'].map((c) => (
-                <span key={c} className="w-7 h-7 rounded-full border-2 border-[#0b0b12] flex items-center justify-center text-[0.6rem] font-bold text-white" style={{ background: c }}>{c[1].toUpperCase()}</span>
+                <span key={c} className="w-7 h-7 rounded-full border-2 border-slate-100 dark:border-[#0b0b12] flex items-center justify-center text-[0.6rem] font-bold text-white" style={{ background: c }}>{c[1].toUpperCase()}</span>
               ))}
             </div>
             <span className="flex items-center gap-1">
@@ -101,7 +103,7 @@ export default function LandingPage() {
           ].map((stat) => (
             <div key={stat.label} className="text-center">
               <div className={`text-3xl md:text-4xl font-extrabold ${stat.color}`}>{stat.value}</div>
-              <div className="text-sm text-gray-500 mt-1">{stat.label}</div>
+              <div className="text-sm text-slate-500 dark:text-gray-500 mt-1">{stat.label}</div>
             </div>
           ))}
         </div>
@@ -115,16 +117,16 @@ export default function LandingPage() {
             { icon: '⭐', title: 'Рекомендовані', desc: 'Обрані спільнотою', link: 'Дивитись рекомендації', count: 'Курація' },
             { icon: '📂', title: 'Категорії', desc: 'Організований каталог', link: 'Переглянути категорії', count: `${CATEGORIES.length} категорій` },
           ].map((card) => (
-            <div key={card.title} className="bg-[#12121a] border border-white/5 rounded-xl p-5 hover:border-white/10 transition group">
+            <div key={card.title} className="bg-white dark:bg-[#12121a] border border-slate-200 dark:border-white/5 rounded-xl p-5 hover:border-slate-300 dark:hover:border-white/10 transition group">
               <div className="flex items-start justify-between mb-3">
                 <div>
                   <span className="text-2xl block mb-1">{card.icon}</span>
-                  <h3 className="text-base font-semibold text-gray-100">{card.title}</h3>
-                  <p className="text-xs text-gray-500">{card.desc}</p>
+                  <h3 className="text-base font-semibold text-slate-900 dark:text-gray-100">{card.title}</h3>
+                  <p className="text-xs text-slate-500 dark:text-gray-500">{card.desc}</p>
                 </div>
-                <span className="text-xs text-gray-600 bg-white/5 px-2 py-0.5 rounded">{card.count}</span>
+                <span className="text-xs text-slate-600 dark:text-gray-600 bg-slate-100 dark:bg-white/5 px-2 py-0.5 rounded">{card.count}</span>
               </div>
-              <a href="#tools" className="inline-flex items-center gap-1 text-sm text-gray-500 hover:text-blue-400 transition no-underline group-hover:text-blue-400">
+              <a href="#tools" className="inline-flex items-center gap-1 text-sm text-slate-500 dark:text-gray-500 hover:text-blue-500 dark:hover:text-blue-400 transition no-underline group-hover:text-blue-500 dark:group-hover:text-blue-400">
                 {card.link}
                 <svg width="12" height="12" viewBox="0 0 16 16" fill="none"><path d="M6 4l4 4-4 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
               </a>
@@ -137,10 +139,10 @@ export default function LandingPage() {
       <section id="tools" className="max-w-5xl mx-auto px-6 pb-16">
         <div className="flex items-end justify-between mb-6">
           <div>
-            <p className="text-[0.6875rem] font-semibold uppercase tracking-widest text-gray-500 mb-1">Опубліковані інструменти</p>
-            <h2 className="text-2xl font-bold text-gray-100">Останні інструменти</h2>
+            <p className="text-[0.6875rem] font-semibold uppercase tracking-widest text-slate-500 dark:text-gray-500 mb-1">Опубліковані інструменти</p>
+            <h2 className="text-2xl font-bold text-slate-900 dark:text-gray-100">Останні інструменти</h2>
           </div>
-          <Link to="/login" className="text-sm text-gray-400 hover:text-blue-400 transition no-underline flex items-center gap-1">
+          <Link to="/login" className="text-sm text-slate-600 dark:text-gray-400 hover:text-blue-500 dark:hover:text-blue-400 transition no-underline flex items-center gap-1">
             Переглянути всі
             <svg width="12" height="12" viewBox="0 0 16 16" fill="none"><path d="M6 4l4 4-4 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
           </Link>
@@ -149,39 +151,39 @@ export default function LandingPage() {
         {loading ? (
           <div className="grid md:grid-cols-3 gap-5">
             {[1, 2, 3].map((i) => (
-              <div key={i} className="bg-[#12121a] border border-white/5 rounded-xl p-5 animate-pulse">
-                <div className="w-2/3 h-5 bg-gray-800 rounded mb-3" />
-                <div className="w-full h-3 bg-gray-800 rounded mb-2" />
-                <div className="w-4/5 h-3 bg-gray-800 rounded" />
+              <div key={i} className="bg-white dark:bg-[#12121a] border border-slate-200 dark:border-white/5 rounded-xl p-5 animate-pulse">
+                <div className="w-2/3 h-5 bg-slate-200 dark:bg-gray-800 rounded mb-3" />
+                <div className="w-full h-3 bg-slate-200 dark:bg-gray-800 rounded mb-2" />
+                <div className="w-4/5 h-3 bg-slate-200 dark:bg-gray-800 rounded" />
               </div>
             ))}
           </div>
         ) : tools.length === 0 ? (
-          <div className="text-center py-16 bg-[#12121a] border border-dashed border-white/10 rounded-xl">
+          <div className="text-center py-16 bg-white dark:bg-[#12121a] border border-dashed border-slate-200 dark:border-white/10 rounded-xl">
             <span className="text-4xl block mb-3">🔍</span>
-            <h3 className="text-lg font-semibold text-gray-300 mb-2">Поки що немає інструментів</h3>
-            <p className="text-sm text-gray-500">Зареєструйтеся та додайте перший інструмент!</p>
+            <h3 className="text-lg font-semibold text-slate-700 dark:text-gray-300 mb-2">Поки що немає інструментів</h3>
+            <p className="text-sm text-slate-500 dark:text-gray-500">Зареєструйтеся та додайте перший інструмент!</p>
           </div>
         ) : (
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-5">
             {tools.map((tool) => {
               const tagCls = catColors[tool.category.toLowerCase()] ?? 'bg-blue-500/20 text-blue-400 border-blue-500/30'
               return (
-                <div key={tool.id} className="bg-[#12121a] border border-white/5 rounded-xl p-5 flex flex-col gap-3 hover:border-white/10 transition group">
+                <div key={tool.id} className="bg-white dark:bg-[#12121a] border border-slate-200 dark:border-white/5 rounded-xl p-5 flex flex-col gap-3 hover:border-slate-300 dark:hover:border-white/10 transition group">
                   <div className="flex items-start gap-3">
                     <span className="text-2xl leading-none shrink-0">{tool.icon}</span>
                     <div className="flex-1 min-w-0">
-                      <h3 className="text-base font-semibold text-gray-100 leading-tight mb-1">{tool.name}</h3>
+                      <h3 className="text-base font-semibold text-slate-900 dark:text-gray-100 leading-tight mb-1">{tool.name}</h3>
                       <div className="flex flex-wrap gap-1">
                         <span className={`text-[0.6875rem] font-medium px-1.5 py-0.5 rounded border ${tagCls}`}>{tool.category}</span>
                         {tool.tags.slice(0, 2).map((tag) => (
-                          <span key={tag} className="text-[0.6875rem] px-1.5 py-0.5 rounded bg-white/5 text-gray-500 border border-white/5">{tag}</span>
+                          <span key={tag} className="text-[0.6875rem] px-1.5 py-0.5 rounded bg-slate-100 dark:bg-white/5 text-slate-500 dark:text-gray-500 border border-slate-200 dark:border-white/5">{tag}</span>
                         ))}
                       </div>
                     </div>
                   </div>
-                  <p className="text-sm text-gray-500 leading-relaxed line-clamp-2">{tool.description}</p>
-                  <div className="flex flex-wrap gap-2 text-xs text-gray-600">
+                  <p className="text-sm text-slate-500 dark:text-gray-500 leading-relaxed line-clamp-2">{tool.description}</p>
+                  <div className="flex flex-wrap gap-2 text-xs text-slate-600 dark:text-gray-600">
                     {tool.license && <span>Ліцензія: {tool.license}</span>}
                     {tool.github_url && (
                       <span className="flex items-center gap-0.5">
@@ -191,8 +193,8 @@ export default function LandingPage() {
                     )}
                   </div>
                   <div className="flex gap-2 mt-auto pt-1">
-                    <Link to="/login" className="flex-1 py-1.5 text-center text-[0.8125rem] font-medium bg-white/5 rounded-lg text-gray-300 no-underline hover:bg-white/10 transition">Переглянути</Link>
-                    <Link to="/login" className="flex-1 py-1.5 text-center text-[0.8125rem] font-medium bg-blue-600/20 text-blue-400 rounded-lg no-underline hover:bg-blue-600/30 transition">Деталі</Link>
+                    <Link to="/login" className="flex-1 py-1.5 text-center text-[0.8125rem] font-medium bg-slate-100 dark:bg-white/5 rounded-lg text-slate-700 dark:text-gray-300 no-underline hover:bg-slate-200 dark:hover:bg-white/10 transition">Переглянути</Link>
+                    <Link to="/login" className="flex-1 py-1.5 text-center text-[0.8125rem] font-medium bg-blue-600/20 text-blue-600 dark:text-blue-400 rounded-lg no-underline hover:bg-blue-600/30 transition">Деталі</Link>
                   </div>
                 </div>
               )
@@ -204,8 +206,8 @@ export default function LandingPage() {
       {/* Categories */}
       <section id="categories" className="max-w-5xl mx-auto px-6 pb-16">
         <div className="mb-6">
-          <p className="text-[0.6875rem] font-semibold uppercase tracking-widest text-gray-500 mb-1">Організований каталог</p>
-          <h2 className="text-2xl font-bold text-gray-100">Категорії інструментів</h2>
+          <p className="text-[0.6875rem] font-semibold uppercase tracking-widest text-slate-500 dark:text-gray-500 mb-1">Організований каталог</p>
+          <h2 className="text-2xl font-bold text-slate-900 dark:text-gray-100">Категорії інструментів</h2>
         </div>
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
           {CATEGORIES.map((cat) => {
@@ -218,9 +220,9 @@ export default function LandingPage() {
               'Моніторинг': 'border-amber-500/30 hover:bg-amber-500/10',
             }
             return (
-              <div key={cat} className={`bg-[#12121a] border rounded-xl p-4 text-center transition cursor-default ${colorMap[cat] ?? 'border-white/5'}`}>
-                <div className="text-lg font-bold text-gray-200">{cat}</div>
-                <div className="text-xs text-gray-500 mt-1">{count} інстр.</div>
+              <div key={cat} className={`bg-white dark:bg-[#12121a] border rounded-xl p-4 text-center transition cursor-default ${colorMap[cat] ?? 'border-slate-200 dark:border-white/5'}`}>
+                <div className="text-lg font-bold text-slate-800 dark:text-gray-200">{cat}</div>
+                <div className="text-xs text-slate-500 dark:text-gray-500 mt-1">{count} інстр.</div>
               </div>
             )
           })}
@@ -232,12 +234,12 @@ export default function LandingPage() {
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_80%_40%_at_50%_100%,rgba(59,130,246,0.08),transparent)]" />
         <div className="relative max-w-5xl mx-auto px-6">
           <div className="text-center mb-10">
-            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-500/10 border border-blue-500/20 text-blue-400 text-xs font-medium mb-4">
+            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-500/10 border border-blue-500/20 text-blue-600 dark:text-blue-400 text-xs font-medium mb-4">
               <svg width="12" height="12" viewBox="0 0 16 16" fill="none"><path d="M8 1l2.35 4.76L16 6.47l-4 3.9.94 5.5L8 13.24l-4.94 2.63.94-5.5-4-3.9 5.65-.71L8 1z" stroke="currentColor" strokeWidth="1.3" strokeLinejoin="round"/></svg>
               Чому Літопис
             </div>
-            <h2 className="text-2xl md:text-3xl font-bold text-gray-100 mb-3">Створено для професіоналів</h2>
-            <p className="text-gray-400 max-w-lg mx-auto">Точність, надійність та інновації у кожному дослідженні</p>
+            <h2 className="text-2xl md:text-3xl font-bold text-slate-900 dark:text-gray-100 mb-3">Створено для професіоналів</h2>
+            <p className="text-slate-600 dark:text-gray-400 max-w-lg mx-auto">Точність, надійність та інновації у кожному дослідженні</p>
           </div>
           <div className="grid md:grid-cols-3 gap-5">
             {[
@@ -260,10 +262,10 @@ export default function LandingPage() {
                 bg: 'bg-green-500/10',
               },
             ].map((f) => (
-              <div key={f.title} className="bg-[#12121a] border border-white/5 rounded-xl p-6 text-center hover:border-white/10 transition">
+              <div key={f.title} className="bg-white dark:bg-[#12121a] border border-slate-200 dark:border-white/5 rounded-xl p-6 text-center hover:border-slate-300 dark:hover:border-white/10 transition">
                 <div className={`w-12 h-12 rounded-xl ${f.bg} flex items-center justify-center mx-auto mb-4`}>{f.icon}</div>
-                <h3 className="text-lg font-semibold text-gray-100 mb-2">{f.title}</h3>
-                <p className="text-sm text-gray-500 leading-relaxed">{f.desc}</p>
+                <h3 className="text-lg font-semibold text-slate-900 dark:text-gray-100 mb-2">{f.title}</h3>
+                <p className="text-sm text-slate-500 dark:text-gray-500 leading-relaxed">{f.desc}</p>
               </div>
             ))}
           </div>
@@ -272,18 +274,18 @@ export default function LandingPage() {
 
       {/* CTA */}
       <section className="max-w-5xl mx-auto px-6 pb-20">
-        <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-[#12121a] via-[#151520] to-[#12121a] border border-white/5 px-6 py-14 text-center">
+        <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-slate-200 via-slate-100 to-slate-200 dark:from-[#12121a] dark:via-[#151520] dark:to-[#12121a] border border-slate-200 dark:border-white/5 px-6 py-14 text-center">
           <div className="absolute inset-0 bg-[radial-gradient(ellipse_60%_50%_at_50%_50%,rgba(59,130,246,0.12),transparent)]" />
           <div className="relative">
-            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-500/10 border border-blue-500/20 text-blue-400 text-xs font-medium mb-5">
+            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-500/10 border border-blue-500/20 text-blue-600 dark:text-blue-400 text-xs font-medium mb-5">
               <svg width="12" height="12" viewBox="0 0 16 16" fill="none"><path d="M3 2l5 2 5-2v11l-5 2-5-2V2z" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round"/></svg>
               Готові розпочати?
             </div>
-            <h2 className="text-3xl md:text-4xl font-extrabold mb-3">
+            <h2 className="text-3xl md:text-4xl font-extrabold text-slate-900 dark:text-white mb-3">
               Почніть досліджувати{' '}
-              <span className="bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">сьогодні</span>
+              <span className="bg-gradient-to-r from-blue-500 to-purple-500 dark:from-blue-400 dark:to-purple-400 bg-clip-text text-transparent">сьогодні</span>
             </h2>
-            <p className="text-gray-400 max-w-md mx-auto mb-8">
+            <p className="text-slate-600 dark:text-gray-400 max-w-md mx-auto mb-8">
               Приєднуйтесь до спільноти аналітиків, які використовують Літопис для ефективних OSINT-досліджень.
             </p>
             <div className="flex flex-wrap items-center justify-center gap-4 mb-6">
@@ -291,12 +293,12 @@ export default function LandingPage() {
                 <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M3 2l5 2 5-2v11l-5 2-5-2V2z" stroke="currentColor" strokeWidth="1.3" strokeLinejoin="round"/></svg>
                 Створити акаунт
               </Link>
-              <a href="#tools" className="inline-flex items-center gap-2 px-5 py-2.5 border border-gray-700 text-gray-300 rounded-lg hover:bg-white/5 hover:border-gray-500 transition no-underline text-sm">
+              <a href="#tools" className="inline-flex items-center gap-2 px-5 py-2.5 border border-slate-300 dark:border-gray-700 text-slate-700 dark:text-gray-300 rounded-lg hover:bg-slate-200 dark:hover:bg-white/5 hover:border-slate-400 dark:hover:border-gray-500 transition no-underline text-sm">
                 <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M3 2h10a1 1 0 011 1v10a1 1 0 01-1 1H3a1 1 0 01-1-1V3a1 1 0 011-1z" stroke="currentColor" strokeWidth="1.3"/><path d="M5 5h6M5 8h6M5 11h3" stroke="currentColor" strokeWidth="1.1" strokeLinecap="round"/></svg>
                 Переглянути каталог
               </a>
             </div>
-            <div className="flex flex-wrap items-center justify-center gap-5 text-xs text-gray-600">
+            <div className="flex flex-wrap items-center justify-center gap-5 text-xs text-slate-600 dark:text-gray-600">
               <span className="flex items-center gap-1">
                 <svg width="12" height="12" viewBox="0 0 16 16" fill="none"><path d="M13.5 4.5l-8 8L2 9" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
                 Безкоштовно
@@ -315,44 +317,44 @@ export default function LandingPage() {
       </section>
 
       {/* Footer */}
-      <footer className="border-t border-white/5 bg-[#08080e]">
+      <footer className="border-t border-slate-200 dark:border-white/5 bg-slate-200 dark:bg-[#08080e]">
         <div className="max-w-5xl mx-auto px-6 py-12">
           <div className="grid md:grid-cols-4 gap-8 mb-10">
             <div>
-              <div className="flex items-center gap-2 text-white font-bold mb-3">
+              <div className="flex items-center gap-2 text-slate-900 dark:text-white font-bold mb-3">
                 <span className="w-6 h-6 rounded-md bg-blue-600 flex items-center justify-center">
                   <svg width="12" height="12" viewBox="0 0 16 16" fill="none"><path d="M3 2l5 2 5-2v11l-5 2-5-2V2z" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round"/></svg>
                 </span>
                 Літопис
               </div>
-              <p className="text-sm text-gray-600 leading-relaxed">Ваш каталог OSINT інструментів. Збирайте, організовуйте та діліться з колегами.</p>
+              <p className="text-sm text-slate-600 dark:text-gray-600 leading-relaxed">Ваш каталог OSINT інструментів. Збирайте, організовуйте та діліться з колегами.</p>
             </div>
             <div>
-              <h4 className="text-sm font-semibold text-gray-300 mb-3">Інструменти</h4>
-              <ul className="space-y-1.5 text-sm text-gray-600 list-none p-0 m-0">
-                <li><a href="#tools" className="hover:text-gray-300 transition no-underline">Всі інструменти</a></li>
-                <li><a href="#tools" className="hover:text-gray-300 transition no-underline">Популярні</a></li>
-                <li><a href="#categories" className="hover:text-gray-300 transition no-underline">Категорії</a></li>
+              <h4 className="text-sm font-semibold text-slate-700 dark:text-gray-300 mb-3">Інструменти</h4>
+              <ul className="space-y-1.5 text-sm text-slate-600 dark:text-gray-600 list-none p-0 m-0">
+                <li><a href="#tools" className="hover:text-slate-900 dark:hover:text-gray-300 transition no-underline">Всі інструменти</a></li>
+                <li><a href="#tools" className="hover:text-slate-900 dark:hover:text-gray-300 transition no-underline">Популярні</a></li>
+                <li><a href="#categories" className="hover:text-slate-900 dark:hover:text-gray-300 transition no-underline">Категорії</a></li>
               </ul>
             </div>
             <div>
-              <h4 className="text-sm font-semibold text-gray-300 mb-3">Платформа</h4>
-              <ul className="space-y-1.5 text-sm text-gray-600 list-none p-0 m-0">
-                <li><Link to="/register" className="hover:text-gray-300 transition no-underline">Реєстрація</Link></li>
-                <li><Link to="/login" className="hover:text-gray-300 transition no-underline">Вхід</Link></li>
-                <li><a href="#features" className="hover:text-gray-300 transition no-underline">Можливості</a></li>
+              <h4 className="text-sm font-semibold text-slate-700 dark:text-gray-300 mb-3">Платформа</h4>
+              <ul className="space-y-1.5 text-sm text-slate-600 dark:text-gray-600 list-none p-0 m-0">
+                <li><Link to="/register" className="hover:text-slate-900 dark:hover:text-gray-300 transition no-underline">Реєстрація</Link></li>
+                <li><Link to="/login" className="hover:text-slate-900 dark:hover:text-gray-300 transition no-underline">Вхід</Link></li>
+                <li><a href="#features" className="hover:text-slate-900 dark:hover:text-gray-300 transition no-underline">Можливості</a></li>
               </ul>
             </div>
             <div>
-              <h4 className="text-sm font-semibold text-gray-300 mb-3">Спільнота</h4>
-              <ul className="space-y-1.5 text-sm text-gray-600 list-none p-0 m-0">
-                <li><a href="#" className="hover:text-gray-300 transition no-underline">Telegram</a></li>
-                <li><a href="#" className="hover:text-gray-300 transition no-underline">GitHub</a></li>
-                <li><a href="#" className="hover:text-gray-300 transition no-underline">Signal</a></li>
+              <h4 className="text-sm font-semibold text-slate-700 dark:text-gray-300 mb-3">Спільнота</h4>
+              <ul className="space-y-1.5 text-sm text-slate-600 dark:text-gray-600 list-none p-0 m-0">
+                <li><a href="#" className="hover:text-slate-900 dark:hover:text-gray-300 transition no-underline">Telegram</a></li>
+                <li><a href="#" className="hover:text-slate-900 dark:hover:text-gray-300 transition no-underline">GitHub</a></li>
+                <li><a href="#" className="hover:text-slate-900 dark:hover:text-gray-300 transition no-underline">Signal</a></li>
               </ul>
             </div>
           </div>
-          <div className="flex flex-wrap items-center justify-between gap-4 pt-6 border-t border-white/5 text-xs text-gray-600">
+          <div className="flex flex-wrap items-center justify-between gap-4 pt-6 border-t border-slate-300 dark:border-white/5 text-xs text-slate-600 dark:text-gray-600">
             <span>&copy; 2026 Літопис. Всі права захищені.</span>
             <span>Зроблено в Україні 🇺🇦</span>
           </div>
