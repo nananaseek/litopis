@@ -1,41 +1,59 @@
+COMPOSE_DEV  = -f docker-compose.dev.yml
+COMPOSE_PROD = -f docker-compose.prod.yml
+
 .PHONY: dev build up down logs restart clean backend-shell frontend-shell mongo-shell lint prod prod-backend prod-frontend help
+.PHONY: prod-docker-up prod-docker-down prod-docker-logs prod-docker-build
 
 help: ## Show this help
-	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-18s\033[0m %s\n", $$1, $$2}'
+	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-22s\033[0m %s\n", $$1, $$2}'
 
-# ── Docker ────────────────────────────────────────────────────
+# ── Docker (dev) ───────────────────────────────────────────────
 
-dev: ## Start all services in dev mode (with logs)
-	docker compose up --build
+dev: ## Start dev stack: MongoDB + backend + frontend (no nginx/acme)
+	docker compose $(COMPOSE_DEV) up --build
 
-build: ## Build production images
-	docker compose build
+build: ## Build dev images
+	docker compose $(COMPOSE_DEV) build
 
-up: ## Start all services (detached)
-	docker compose up -d --build
+up: ## Start dev stack detached
+	docker compose $(COMPOSE_DEV) up -d --build
 
-down: ## Stop all services
-	docker compose down
+down: ## Stop dev stack
+	docker compose $(COMPOSE_DEV) down
 
-restart: ## Restart all services
-	docker compose restart
+restart: ## Restart dev services
+	docker compose $(COMPOSE_DEV) restart
 
-logs: ## Tail logs for all services
-	docker compose logs -f
+logs: ## Tail logs (dev stack)
+	docker compose $(COMPOSE_DEV) logs -f
 
-clean: ## Stop services, remove volumes and images
-	docker compose down -v --rmi local
+clean: ## Stop dev, remove volumes and images
+	docker compose $(COMPOSE_DEV) down -v --rmi local
 
-# ── Shells ────────────────────────────────────────────────────
+# ── Docker (prod: nginx + acme) ────────────────────────────────
 
-backend-shell: ## Open shell in backend container
-	docker compose exec backend bash || docker compose exec backend sh
+prod-docker-up: ## Start production stack (nginx, acme, mongo, backend, frontend)
+	docker compose $(COMPOSE_PROD) up -d --build
 
-frontend-shell: ## Open shell in frontend container
-	docker compose exec frontend sh
+prod-docker-down: ## Stop production stack
+	docker compose $(COMPOSE_PROD) down
 
-mongo-shell: ## Open MongoDB shell
-	docker compose exec mongodb mongosh litopis
+prod-docker-logs: ## Tail production logs
+	docker compose $(COMPOSE_PROD) logs -f
+
+prod-docker-build: ## Build production images
+	docker compose $(COMPOSE_PROD) build
+
+# ── Shells (dev stack) ─────────────────────────────────────────
+
+backend-shell: ## Open shell in backend container (dev)
+	docker compose $(COMPOSE_DEV) exec backend bash || docker compose $(COMPOSE_DEV) exec backend sh
+
+frontend-shell: ## Open shell in frontend container (dev)
+	docker compose $(COMPOSE_DEV) exec frontend sh
+
+mongo-shell: ## Open MongoDB shell (dev)
+	docker compose $(COMPOSE_DEV) exec mongodb mongosh litopis
 
 # ── Production (без Docker) ────────────────────────────────────
 
