@@ -9,7 +9,15 @@ const client = axios.create({
   headers: { 'Content-Type': 'application/json' },
 })
 
+// На рівні запиту гарантуємо шлях /api/v1 (на випадок застарілого бандла або неправильного baseURL)
+const API_PREFIX = '/api/v1'
 client.interceptors.request.use((config) => {
+  const url = config.url ?? ''
+  const path = url.startsWith('/') ? url : `/${url}`
+  if (!path.startsWith(API_PREFIX)) {
+    config.url = API_PREFIX + path
+    config.baseURL = '' // щоб не подвоїти шлях
+  }
   const token = localStorage.getItem('access_token')
   if (token) {
     config.headers.Authorization = `Bearer ${token}`
