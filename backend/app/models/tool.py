@@ -3,6 +3,7 @@ from enum import StrEnum
 
 from beanie import Document, Indexed, PydanticObjectId
 from pydantic import HttpUrl
+from pymongo import IndexModel
 
 
 class ToolCategory(StrEnum):
@@ -34,3 +35,6 @@ class Tool(Document):
 
     class Settings:
         name = "tools"
+        indexes = [
+            IndexModel([("owner_id", 1), ("created_at", -1)], name="owner_created_desc"),
+        ]

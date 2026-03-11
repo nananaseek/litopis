@@ -9,8 +9,8 @@ interface ToolCardProps {
   isOwner?: boolean
   onPublish?: () => void
   onUnpublish?: () => void
-  onDelete?: () => void
-  onFavoriteChange?: () => void
+  onDeleteRequest?: (id: string, name: string) => void
+  onFavoriteChange?: (toolId: string, isFavorited: boolean) => void
 }
 
 const catColors: Record<string, string> = {
@@ -21,7 +21,7 @@ const catColors: Record<string, string> = {
   'моніторинг': 'bg-amber-500/20 text-amber-400 border-amber-500/30',
 }
 
-export default function ToolCard({ tool, isOwner, onPublish, onUnpublish, onDelete, onFavoriteChange }: ToolCardProps) {
+export default function ToolCard({ tool, isOwner, onPublish, onUnpublish, onDeleteRequest, onFavoriteChange }: ToolCardProps) {
   const navigate = useNavigate()
   const [favorited, setFavorited] = useState(!!tool.is_favorited)
   const [favoriteLoading, setFavoriteLoading] = useState(false)
@@ -39,11 +39,12 @@ export default function ToolCard({ tool, isOwner, onPublish, onUnpublish, onDele
       if (favorited) {
         await toolsApi.removeFavorite(tool.id)
         setFavorited(false)
+        onFavoriteChange?.(tool.id, false)
       } else {
         await toolsApi.addFavorite(tool.id)
         setFavorited(true)
+        onFavoriteChange?.(tool.id, true)
       }
-      onFavoriteChange?.()
     } catch { /* interceptor */ } finally { setFavoriteLoading(false) }
   }
 
@@ -91,14 +92,27 @@ export default function ToolCard({ tool, isOwner, onPublish, onUnpublish, onDele
         {tool.official_url && (
           <a href={tool.official_url} target="_blank" rel="noopener noreferrer" className={`${btnBase} bg-blue-600 text-white`}>Сайт</a>
         )}
+        {tool.download_url && (
+          <a href={tool.download_url} target="_blank" rel="noopener noreferrer" className={`${btnBase} bg-green-500 text-white`}>Завантажити</a>
+        )}
         {isOwner && !tool.is_published && onPublish && (
           <button type="button" className={`${btnBase} bg-green-500 text-white`} onClick={onPublish}>Опублікувати</button>
         )}
         {isOwner && tool.is_published && onUnpublish && (
           <button type="button" className={`${btnBase} bg-amber-500 text-white`} onClick={onUnpublish}>Зняти</button>
         )}
-        {isOwner && onDelete && (
-          <button type="button" className={`${btnBase} bg-red-500 text-white`} onClick={onDelete}>Видалити</button>
+        {isOwner && onDeleteRequest && (
+          <button
+            type="button"
+            className={`${btnBase} bg-red-500 text-white`}
+            onClick={(e) => {
+              e.preventDefault()
+              e.stopPropagation()
+              onDeleteRequest(tool.id, tool.name)
+            }}
+          >
+            Видалити
+          </button>
         )}
       </div>
     </article>

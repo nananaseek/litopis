@@ -22,8 +22,19 @@ export interface ToolResponse {
   is_favorited?: boolean | null
 }
 
-export async function getMyTools(skip = 0, limit = 50): Promise<ToolResponse[]> {
-  const { data } = await client.get<ToolResponse[]>('/tools/my', { params: { skip, limit } })
+export interface MyToolsResponse {
+  items: ToolResponse[]
+  total: number
+}
+
+export async function getMyTools(
+  skip = 0,
+  limit = 50,
+  params?: { category?: string; search?: string }
+): Promise<MyToolsResponse> {
+  const { data } = await client.get<MyToolsResponse>('/tools/my', {
+    params: { skip, limit, ...params },
+  })
   return data
 }
 
@@ -91,14 +102,19 @@ export async function refreshReadme(id: string): Promise<ToolDetailResponse> {
   return data
 }
 
+export interface LibraryListResponse {
+  items: ToolResponse[]
+  total: number
+}
+
 export async function getLibrary(params?: {
   skip?: number
   limit?: number
   category?: string
   search?: string
   min_rating?: number
-}): Promise<ToolResponse[]> {
-  const { data } = await client.get<ToolResponse[]>('/tools/library', { params })
+}): Promise<LibraryListResponse> {
+  const { data } = await client.get<LibraryListResponse>('/tools/library', { params })
   return data
 }
 

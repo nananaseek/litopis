@@ -1,5 +1,7 @@
 import { useState, useMemo, useEffect, useCallback } from 'react'
 import AddToolModal from '../components/AddToolModal/AddToolModal'
+import ConfirmDialog from '../components/ConfirmDialog/ConfirmDialog'
+import ImportToolsModal from '../components/ImportToolsModal/ImportToolsModal'
 import ToolCard from '../components/ToolCard/ToolCard'
 import type { ToolFormData } from '../types/arsenal'
 import { CATEGORIES } from '../data/mockTools'
@@ -16,8 +18,12 @@ export default function ArsenalPage() {
   const [minRating, setMinRating] = useState<number | null>(null)
   const [sortBy, setSortBy] = useState('popularity')
   const [modalOpen, setModalOpen] = useState(false)
+  const [importModalOpen, setImportModalOpen] = useState(false)
+  const [pendingDelete, setPendingDelete] = useState<{ id: string; name: string } | null>(null)
   const [myTools, setMyTools] = useState<ToolResponse[]>([])
+  const [myToolsTotal, setMyToolsTotal] = useState(0)
   const [libraryTools, setLibraryTools] = useState<ToolResponse[]>([])
+  const [libraryToolsTotal, setLibraryToolsTotal] = useState(0)
   const [favoriteTools, setFavoriteTools] = useState<ToolResponse[]>([])
   const [libraryStats, setLibraryStats] = useState<{ total: number; new: number } | null>(null)
   const [currentPage, setCurrentPage] = useState(1)
@@ -27,26 +33,44 @@ export default function ArsenalPage() {
   const loadMyTools = useCallback(async () => {
     setLoading(true)
     try {
-      const data = await toolsApi.getMyTools()
-      setMyTools(Array.isArray(data) ? data : [])
-    } catch { setMyTools([]) } finally { setLoading(false) }
-  }, [])
+      const category = categoryFilter !== 'Всі' ? categoryFilter : undefined
+      const data = await toolsApi.getMyTools(
+        (currentPage - 1) * pageSize,
+        pageSize,
+        { category, search: search || undefined }
+      )
+      setMyTools(data.items)
+      setMyToolsTotal(data.total)
+    } catch {
+      setMyTools([])
+      setMyToolsTotal(0)
+    } finally {
+      setLoading(false)
+    }
+  }, [currentPage, pageSize, categoryFilter, search])
 
   const loadLibrary = useCallback(async () => {
     setLoading(true)
     try {
-      const params: { category?: string; search?: string; min_rating?: number } = {}
-      if (categoryFilter !== 'Всі') params.category = categoryFilter
-      if (search) params.search = search
-      if (minRating != null) params.min_rating = minRating
-      const data = await toolsApi.getLibrary(params)
-      setLibraryTools(Array.isArray(data) ? data : [])
+      const category = categoryFilter !== 'Всі' ? categoryFilter : undefined
+      const data = await toolsApi.getLibrary({
+        skip: (currentPage - 1) * pageSize,
+        limit: pageSize,
+        category,
+        search: search || undefined,
+        min_rating: minRating ?? undefined,
+      })
+      setLibraryTools(data.items)
+      setLibraryToolsTotal(data.total)
       const stats = await toolsApi.getLibraryStats()
       setLibraryStats(stats)
     } catch {
       setLibraryTools([])
-    } finally { setLoading(false) }
-  }, [categoryFilter, search, minRating])
+      setLibraryToolsTotal(0)
+    } finally {
+      setLoading(false)
+    }
+  }, [currentPage, pageSize, categoryFilter, search, minRating])
 
   const loadFavorites = useCallback(async () => {
     setLoading(true)
@@ -68,27 +92,55 @@ export default function ArsenalPage() {
   const toolsList = Array.isArray(tools) ? tools : []
 
   const filteredTools = useMemo(() => {
+    if (activeTab === 'my' || activeTab === 'library') return toolsList
     let list = toolsList.filter((t) => {
       const matchSearch = !search || t.name.toLowerCase().includes(search.toLowerCase()) || t.description.toLowerCase().includes(search.toLowerCase())
       const matchCategory = categoryFilter === 'Всі' || t.category === categoryFilter
-      return activeTab === 'library' || activeTab === 'favorites' ? matchSearch && matchCategory : matchSearch && matchCategory
+      return matchSearch && matchCategory
     })
     if (sortBy === 'name') list = [...list].sort((a, b) => a.name.localeCompare(b.name))
     return list
-  }, [toolsList, search, categoryFilter, sortBy, activeTab])
+  }, [activeTab, toolsList, search, categoryFilter, sortBy])
 
-  const totalPages = Math.max(1, Math.ceil(filteredTools.length / pageSize))
-  const paginatedTools = useMemo(() => filteredTools.slice((currentPage - 1) * pageSize, currentPage * pageSize), [filteredTools, currentPage, pageSize])
+  const totalPages =
+    activeTab === 'my'
+      ? Math.max(1, Math.ceil(myToolsTotal / pageSize))
+      : activeTab === 'library'
+        ? Math.max(1, Math.ceil(libraryToolsTotal / pageSize))
+        : Math.max(1, Math.ceil(filteredTools.length / pageSize))
+  const slicedLibraryOrFavorites = useMemo(
+    () => filteredTools.slice((currentPage - 1) * pageSize, currentPage * pageSize),
+    [filteredTools, currentPage, pageSize]
+  )
+  const paginatedTools =
+    activeTab === 'my' ? myTools : activeTab === 'library' ? libraryTools : slicedLibraryOrFavorites
+  const foundCount =
+    activeTab === 'my' ? myToolsTotal : activeTab === 'library' ? libraryToolsTotal : filteredTools.length
 
   const handleSaveTool = async (data: ToolFormData) => { await toolsApi.createTool(data); await loadMyTools() }
-  const handlePublish = async (id: string) => { await toolsApi.publishTool(id); await loadMyTools() }
-  const handleUnpublish = async (id: string) => { await toolsApi.unpublishTool(id); await loadMyTools() }
-  const handleDelete = async (id: string) => { await toolsApi.deleteTool(id); await loadMyTools() }
-  const handleFavoriteChange = useCallback(() => {
-    if (activeTab === 'my') loadMyTools()
-    else if (activeTab === 'library') loadLibrary()
-    else loadFavorites()
-  }, [activeTab, loadMyTools, loadLibrary, loadFavorites])
+  const handlePublish = async (id: string) => {
+    await toolsApi.publishTool(id)
+    setMyTools((prev) => prev.map((t) => (t.id === id ? { ...t, is_published: true } : t)))
+  }
+  const handleUnpublish = async (id: string) => {
+    await toolsApi.unpublishTool(id)
+    setMyTools((prev) => prev.map((t) => (t.id === id ? { ...t, is_published: false } : t)))
+    setLibraryTools((prev) => prev.filter((t) => t.id !== id))
+    setLibraryToolsTotal((prev) => Math.max(0, prev - 1))
+  }
+  const handleDelete = async (id: string) => {
+    await toolsApi.deleteTool(id)
+    setMyTools((prev) => prev.filter((t) => t.id !== id))
+    setMyToolsTotal((prev) => Math.max(0, prev - 1))
+    setLibraryTools((prev) => prev.filter((t) => t.id !== id))
+    setLibraryToolsTotal((prev) => Math.max(0, prev - 1))
+    setFavoriteTools((prev) => prev.filter((t) => t.id !== id))
+  }
+  const handleFavoriteChange = useCallback((toolId: string, isFavorited: boolean) => {
+    setMyTools((prev) => prev.map((t) => (t.id === toolId ? { ...t, is_favorited: isFavorited } : t)))
+    setLibraryTools((prev) => prev.map((t) => (t.id === toolId ? { ...t, is_favorited: isFavorited } : t)))
+    setFavoriteTools((prev) => (isFavorited ? prev : prev.filter((t) => t.id !== toolId)))
+  }, [])
 
   const tabBase = 'inline-flex items-center gap-1.5 px-4 py-2 text-sm font-medium rounded-lg border transition-colors cursor-pointer'
   const tabActive = 'bg-blue-600 border-blue-600 text-white hover:bg-blue-700'
@@ -114,10 +166,15 @@ export default function ArsenalPage() {
           <p className="text-sm text-slate-500 dark:text-gray-500 m-0">Каталог інструментів та утиліт</p>
         </div>
         {activeTab === 'my' && (
-          <button type="button" className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-green-500 rounded-lg hover:bg-green-600 transition shrink-0 shadow-lg shadow-green-500/20" onClick={() => setModalOpen(true)}>
-            <span className="text-lg leading-none">+</span>
-            Додати інструмент
-          </button>
+          <div className="flex items-center gap-2 shrink-0">
+            <button type="button" className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg border border-slate-300 dark:border-white/10 text-slate-700 dark:text-gray-300 hover:bg-slate-100 dark:hover:bg-white/5 transition" onClick={() => setImportModalOpen(true)}>
+              Імпортувати інструменти
+            </button>
+            <button type="button" className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-green-500 rounded-lg hover:bg-green-600 transition shadow-lg shadow-green-500/20" onClick={() => setModalOpen(true)}>
+              <span className="text-lg leading-none">+</span>
+              Додати інструмент
+            </button>
+          </div>
         )}
       </header>
 
@@ -192,7 +249,7 @@ export default function ArsenalPage() {
         </div>
       )}
 
-      <p className="text-sm text-slate-500 dark:text-gray-500 mb-4">Знайдено: {filteredTools.length} інструментів</p>
+      <p className="text-sm text-slate-500 dark:text-gray-500 mb-4">Знайдено: {foundCount} інструментів</p>
 
       {/* Content */}
       {loading ? (
@@ -213,7 +270,7 @@ export default function ArsenalPage() {
         <>
           <div className="grid grid-cols-[repeat(auto-fill,minmax(320px,1fr))] gap-5">
             {paginatedTools.map((tool) => (
-              <ToolCard key={tool.id} tool={tool} isOwner={activeTab === 'my'} onPublish={() => handlePublish(tool.id)} onUnpublish={() => handleUnpublish(tool.id)} onDelete={() => handleDelete(tool.id)} onFavoriteChange={handleFavoriteChange} />
+              <ToolCard key={tool.id} tool={tool} isOwner={activeTab === 'my'} onPublish={() => handlePublish(tool.id)} onUnpublish={() => handleUnpublish(tool.id)} onDeleteRequest={(id, name) => setPendingDelete({ id, name })} onFavoriteChange={handleFavoriteChange} />
             ))}
           </div>
           {totalPages > 1 && (
@@ -230,6 +287,22 @@ export default function ArsenalPage() {
       )}
 
       <AddToolModal isOpen={modalOpen} onClose={() => setModalOpen(false)} onSave={handleSaveTool} />
+      <ConfirmDialog
+        isOpen={pendingDelete !== null}
+        onClose={() => setPendingDelete(null)}
+        onConfirm={() => {
+          if (pendingDelete) {
+            handleDelete(pendingDelete.id)
+            setPendingDelete(null)
+          }
+        }}
+        title="Видалити інструмент?"
+        message={pendingDelete ? `Ви дійсно хочете видалити інструмент «${pendingDelete.name}»?` : ''}
+        confirmLabel="Видалити"
+        cancelLabel="Скасувати"
+        variant="danger"
+      />
+      <ImportToolsModal isOpen={importModalOpen} onClose={() => setImportModalOpen(false)} onImportComplete={loadMyTools} />
     </div>
   )
 }

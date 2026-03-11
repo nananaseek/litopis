@@ -13,7 +13,7 @@ from app.models.favorite import ToolFavorite
 from app.models.rating import ToolRating
 from app.models.tool import Tool
 from app.models.user import User
-from app.schemas.tool import ToolCreate, ToolDetailResponse, ToolResponse, ToolRatingSet, ToolUpdate
+from app.schemas.tool import ToolCreate, ToolDetailResponse, ToolResponse, ToolRatingSet, ToolUpdate, MyToolsResponse, LibraryResponse
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/tools", tags=["tools"])
@@ -96,26 +96,39 @@ async def _get_own_tool(tool_id: str, user: User) -> Tool:
     return tool
 
 
-async def _user_favorite_tool_ids(user_id: PydanticObjectId) -> set[PydanticObjectId]:
-    favs = await ToolFavorite.find(ToolFavorite.user_id == user_id).to_list()
-    return {f.tool_id for f in favs}
-
-
-@router.get("/my", response_model=list[ToolResponse])
+@router.get("/my", response_model=MyToolsResponse)
 async def get_my_tools(
     user: User = Depends(get_current_user),
     skip: int = Query(0, ge=0),
     limit: int = Query(50, ge=1, le=100),
+    category: str | None = Query(None, description="Фільтр по категорії"),
+    search: str | None = Query(None, description="Пошук по назві, опису, тегах"),
 ):
-    tools = (
-        await Tool.find(Tool.owner_id == user.id)
-        .sort(-Tool.created_at)
-        .skip(skip)
-        .limit(limit)
-        .to_list()
-    )
-    fav_ids = await _user_favorite_tool_ids(user.id)
-    return [_tool_to_response(t, is_favorited=t.id in fav_ids) for t in tools]
+    query = Tool.find(Tool.owner_id == user.id)
+    if category:
+        query = query.find(Tool.category == category)
+    if search:
+        query = query.find(
+            {
+                "$or": [
+                    {"name": {"$regex": search, "$options": "i"}},
+                    {"description": {"$regex": search, "$options": "i"}},
+                    {"tags": {"$regex": search, "$options": "i"}},
+                ]
+            }
+        )
+    total = await query.count()
+    tools = await query.sort(-Tool.created_at).skip(skip).limit(limit).to_list()
+    if not tools:
+        return MyToolsResponse(items=[], total=total)
+    tool_ids = [t.id for t in tools]
+    favs = await ToolFavorite.find(
+        ToolFavorite.user_id == user.id,
+        In(ToolFavorite.tool_id, tool_ids),
+    ).to_list()
+    fav_ids = {f.tool_id for f in favs}
+    items = [_tool_to_response(t, is_favorited=t.id in fav_ids) for t in tools]
+    return MyToolsResponse(items=items, total=total)
 
 
 @router.post("/", response_model=ToolResponse, status_code=status.HTTP_201_CREATED)
@@ -148,7 +161,7 @@ async def get_library_stats():
     return {"total": total, "new": new}
 
 
-@router.get("/library", response_model=list[ToolResponse])
+@router.get("/library", response_model=LibraryResponse)
 async def get_library(
     skip: int = Query(0, ge=0),
     limit: int = Query(50, ge=1, le=100),
@@ -173,6 +186,7 @@ async def get_library(
         )
     if min_rating is not None:
         query = query.find(Tool.average_rating >= float(min_rating))
+    total = await query.count()
     tools = await query.sort(-Tool.created_at).skip(skip).limit(limit).to_list()
     user_ratings_map: dict[str, int] = {}
     fav_ids: set[PydanticObjectId] = set()
@@ -184,11 +198,16 @@ async def get_library(
         ).to_list()
         for r in ratings:
             user_ratings_map[str(r.tool_id)] = r.value
-        fav_ids = await _user_favorite_tool_ids(user.id)
-    return [
+        favs = await ToolFavorite.find(
+            ToolFavorite.user_id == user.id,
+            In(ToolFavorite.tool_id, tool_ids),
+        ).to_list()
+        fav_ids = {f.tool_id for f in favs}
+    items = [
         _tool_to_response(t, user_ratings_map.get(str(t.id)), is_favorited=t.id in fav_ids if user else None)
         for t in tools
     ]
+    return LibraryResponse(items=items, total=total)
 
 
 @router.get("/favorites", response_model=list[ToolResponse])

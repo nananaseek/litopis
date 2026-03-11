@@ -70,3 +70,15 @@ class ToolRatingSet(BaseModel):
 class ToolDetailResponse(ToolResponse):
     readme_content: str | None = None
     about_content: str | None = None
+
+
+class MyToolsResponse(BaseModel):
+    """Відповідь GET /tools/my з пагінацією."""
+    items: list[ToolResponse]
+    total: int
+
+
+class LibraryResponse(BaseModel):
+    """Відповідь GET /tools/library з пагінацією."""
+    items: list[ToolResponse]
+    total: int
