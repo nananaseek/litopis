@@ -1,6 +1,8 @@
 import axios from 'axios'
 
-const API_BASE = import.meta.env.VITE_API_URL ?? '/api/v1'
+// Завжди використовуємо шлях /api/v1 (nginx проксує лише /api/ на бекенд)
+const raw = (import.meta.env.VITE_API_URL ?? '').replace(/\/$/, '')
+const API_BASE = raw && raw.endsWith('/api/v1') ? raw : raw ? `${raw}/api/v1` : '/api/v1'
 
 const client = axios.create({
   baseURL: API_BASE,
