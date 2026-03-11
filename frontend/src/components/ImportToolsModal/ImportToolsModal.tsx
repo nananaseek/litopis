@@ -129,11 +129,11 @@ export default function ImportToolsModal({
       try {
         await toolsApi.createTool(items[i])
         imported++
-      } catch (e) {
+      } catch (e: unknown) {
         const msg =
           e && typeof e === 'object' && 'response' in e && e.response && typeof e.response === 'object' && 'data' in e.response
-            ? String((e.response as { data?: unknown }).data ?? (e as Error).message)
-            : (e as Error).message
+            ? String((e.response as { data?: unknown }).data ?? (e instanceof Error ? e.message : String(e)))
+            : e instanceof Error ? e.message : String(e)
         errors.push(`Інструмент ${i + 1} («${items[i].name}»): ${msg}`)
       }
     }
